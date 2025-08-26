@@ -1,217 +1,446 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>1ª Avaliação Diagnóstica 2025</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8" />
+  <title>Desempenho por Habilidade — CCM Sebastião Paraná</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    #chartWrap { width: 100%; height: 540px; }
+    canvas { width: 100% !important; height: 100% !important; }
+  </style>
 </head>
 <body class="bg-gray-100 text-gray-900">
 
-  <!-- Cabeçalho -->
-  <header class="bg-blue-900 text-white p-6 shadow-lg">
-    <h1 class="text-3xl font-bold">CCM SEBASTIÃO PARANÁ</h1>
-    <h2 class="text-xl mt-2">1ª Avaliação Diagnóstica 2025</h2>
+  <header class="bg-blue-900 text-white">
+    <div class="max-w-6xl mx-auto p-6">
+      <h1 class="text-3xl font-bold">CCM Sebastião Paraná</h1>
+      <p class="text-lg opacity-90">Relatório de Desempenho por Habilidade — 1ª Avaliação 2025</p>
+    </div>
   </header>
 
-  <main class="max-w-6xl mx-auto p-6">
-    <!-- Seleção de turma e aluno -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-      <select id="turmaSelect" class="p-3 rounded-lg border text-lg">
-        <option value="">Selecione a Turma</option>
-        <option value="9ano">9º Ano Fundamental</option>
-        <option value="3serie">3ª Série Ensino Médio</option>
-      </select>
+  <main class="max-w-6xl mx-auto p-6 space-y-6">
+    <section class="bg-white p-4 md:p-6 rounded-xl shadow">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">Turma</label>
+          <select id="turmaSelect" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500">
+            <option value="">Selecione a turma</option>
+            <option value="9ano">9º Ano</option>
+            <option value="3serie">3ª Série</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Aluno</label>
+          <select id="alunoSelect" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500">
+            <option value="">Selecione o aluno</option>
+          </select>
+        </div>
+      </div>
+    </section>
 
-      <select id="alunoSelect" class="p-3 rounded-lg border text-lg">
-        <option value="">Selecione o Aluno</option>
-      </select>
-    </div>
+    <section id="nivelBox" class="hidden rounded-xl border-l-8 p-4 shadow bg-white">
+      <div class="flex items-start gap-3">
+        <div id="nivelBadge" class="px-3 py-1 rounded-full text-sm font-semibold"></div>
+        <div>
+          <p class="text-sm text-gray-600">Nível de aprendizagem do aluno</p>
+          <p class="text-xl font-bold mt-0.5" id="nivelText">—</p>
+        </div>
+      </div>
+    </section>
 
-    <!-- Nível de aprendizagem -->
-    <div id="nivelBox" class="hidden bg-green-100 border-l-4 border-green-600 p-4 mb-6 rounded">
-      <p><strong>Nível de Aprendizagem:</strong> <span id="nivelText"></span></p>
-    </div>
+    <section class="bg-white p-4 md:p-6 rounded-xl shadow">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg md:text-xl font-semibold">Desempenho por habilidade</h2>
+        <div class="text-sm text-gray-600">Escala do eixo Y: 0 a 4 (acertos)</div>
+      </div>
+      <div id="chartWrap">
+        <canvas id="graficoAluno"></canvas>
+      </div>
+      <p class="text-sm text-gray-500 mt-3">
+        Dica: passe o mouse sobre as barras para ver a descrição resumida e o percentual de acertos da habilidade.
+      </p>
+    </section>
 
-    <!-- Gráfico -->
-    <div class="bg-white p-6 rounded-xl shadow mb-6">
-      <canvas id="graficoAluno" width="1000" height="400"></canvas>
-    </div>
-
-    <!-- Descrições -->
-    <div id="descricoes" class="bg-white p-6 rounded-xl shadow">
-      <h3 class="text-xl font-semibold mb-4">Descrições das Habilidades</h3>
+    <section class="bg-white p-4 md:p-6 rounded-xl shadow">
+      <h3 class="text-lg md:text-xl font-semibold mb-4">Descrições formais das habilidades</h3>
       <div id="listaDescricoes" class="space-y-4"></div>
-    </div>
+    </section>
   </main>
 
 <script>
-  // Habilidades Português (H01–H15)
-  const habilidadesPort = {
-    "H01": "Compreender a ideia principal de textos curtos. Benefício: facilita leitura autônoma. Prejuízo: dificuldades em interpretar informações básicas.",
-    "H02": "Identificar informações explícitas em um texto. Benefício: melhora a compreensão detalhada. Prejuízo: perda de informações importantes.",
-    "H03": "Inferir informações implícitas em um texto. Benefício: desenvolve leitura crítica. Prejuízo: limita interpretação em contextos complexos.",
-    "H04": "Reconhecer o gênero textual e sua finalidade. Benefício: amplia competências comunicativas. Prejuízo: dificuldades em ajustar a linguagem.",
-    "H05": "Interpretar gráficos e tabelas em textos. Benefício: melhora análise de dados. Prejuízo: compreensão restrita de informações quantitativas.",
-    "H06": "Distinguir fatos de opiniões. Benefício: fortalece senso crítico. Prejuízo: risco de confundir julgamentos com informações objetivas.",
-    "H07": "Estabelecer relações de causa e consequência. Benefício: organiza o raciocínio. Prejuízo: dificuldades em compreender progressões lógicas.",
-    "H08": "Identificar recursos de persuasão. Benefício: fortalece a cidadania crítica. Prejuízo: vulnerabilidade a manipulações.",
-    "H09": "Reconhecer variações linguísticas. Benefício: respeito à diversidade cultural. Prejuízo: preconceitos linguísticos e limitações de comunicação.",
-    "H10": "Analisar o uso de figuras de linguagem. Benefício: amplia repertório literário. Prejuízo: empobrecimento da interpretação estética.",
-    "H11": "Produzir textos coerentes e coesos. Benefício: melhora comunicação escrita. Prejuízo: dificuldade em estruturar ideias.",
-    "H12": "Revisar e reescrever textos. Benefício: aprimora clareza e correção. Prejuízo: manutenção de erros recorrentes.",
-    "H13": "Utilizar pontuação e ortografia corretamente. Benefício: assegura clareza. Prejuízo: falhas de entendimento em leitura e escrita.",
-    "H14": "Aplicar normas gramaticais. Benefício: fortalece domínio da língua. Prejuízo: limitações em contextos formais.",
-    "H15": "Relacionar textos com seu contexto histórico-social. Benefício: amplia visão crítica. Prejuízo: leitura superficial e descontextualizada."
+/* =============== Utilitários =============== */
+const NBSP = /\u00A0/g;
+const BOM = /^\uFEFF/;
+const normalizeText = (s) => (s || "").toString().replace(BOM,"").replace(NBSP," ").trim();
+
+/* Normaliza H/HM com e sem espaços: "H 01" -> "H01", "HM 1" -> "HM01" */
+const normalizeSkillKey = (k) => {
+  const raw = normalizeText(k).replace(/\s+/g, "");
+  const mHM = raw.match(/^HM(\d{1,2})$/i);
+  if (mHM) return `HM${mHM[1].padStart(2,"0")}`;
+  const mH  = raw.match(/^H(\d{1,2})$/i);
+  if (mH)  return `H${mH[1].padStart(2,"0")}`;
+  return raw;
+};
+
+/* Converte "1 / 2", "1/2", "2", "1,5", "-", "" em {value,hits,total,ratio} */
+function parseScoreCell(cell) {
+  const txt = normalizeText(cell).replace(",", ".");
+  if (!txt || txt === "-" || txt.toUpperCase() === "NA") {
+    return { value: 0, hits: 0, total: 0, ratio: null };
+  }
+  const frac = txt.match(/^(\d+(\.\d+)?)\s*\/\s*(\d+(\.\d+)?)$/);
+  if (frac) {
+    const hits  = parseFloat(frac[1]);
+    const total = parseFloat(frac[3]);
+    return { value: hits, hits, total, ratio: total > 0 ? hits/total : null };
+  }
+  const num = parseFloat(txt);
+  if (!isNaN(num)) return { value: num, hits: num, total: 1, ratio: 1 };
+  return { value: 0, hits: 0, total: 0, ratio: null };
+}
+
+/* =============== Metadados das habilidades =============== */
+/* Curta (tooltip) */
+const curtoPT = {
+  H01:"Ideia central", H02:"Info explícitas", H03:"Inferência",
+  H04:"Gênero/finalidade", H05:"Gráficos no texto", H06:"Fato x opinião",
+  H07:"Causa e consequência", H08:"Persuasão/retórica", H09:"Variação linguística",
+  H10:"Figuras de linguagem", H11:"Coesão e coerência", H12:"Revisão e reescrita",
+  H13:"Ortografia/pontuação", H14:"Norma padrão", H15:"Texto e contexto"
+};
+const curtoMT = {
+  HM01:"Operações básicas", HM02:"Adição/Subtração", HM03:"Multiplicação",
+  HM04:"Divisão", HM05:"Frações", HM06:"Decimais", HM07:"Porcentagens",
+  HM08:"Área", HM09:"Geometria plana", HM10:"Sólidos/volume",
+  HM11:"Equações 1º grau", HM12:"Sistemas lineares", HM13:"Leitura de gráficos",
+  HM14:"Funções", HM15:"Probabilidade", HM16:"Estatística",
+  HM17:"Grandezas/medidas", HM18:"Razões/Proporções", HM19:"PA", HM20:"PG"
+};
+
+/* Formal (bloco inferior) — benefícios e consequências */
+const formalPT = {
+  H01:{titulo:"H01 — Compreensão da ideia central", texto:`Descrição: Identificar a tese ou ideia central em textos.
+Benefícios: Orienta a seleção de informações relevantes e a síntese.
+Consequências do não domínio: Perda do propósito do texto e interpretações inconsistentes.`},
+  H02:{titulo:"H02 — Localização de informações explícitas", texto:`Descrição: Reconhecer dados expressos literalmente.
+Benefícios: Precisão na coleta de evidências.
+Consequências do não domínio: Respostas imprecisas e omissão de detalhes essenciais.`},
+  H03:{titulo:"H03 — Inferência de informações implícitas", texto:`Descrição: Deduzir significados não literais a partir de pistas.
+Benefícios: Leitura crítica e compreensão profunda.
+Consequências do não domínio: Dificuldade com ironias, pressupostos e relações causais.`},
+  H04:{titulo:"H04 — Reconhecimento de gêneros e finalidade", texto:`Descrição: Identificar gênero textual e função comunicativa.
+Benefícios: Direciona estratégias de leitura e produção.
+Consequências do não domínio: Inadequação de linguagem e estrutura.`},
+  H05:{titulo:"H05 — Integração de gráficos/tabelas", texto:`Descrição: Integrar dados visuais ao texto.
+Benefícios: Decisões baseadas em dados.
+Consequências do não domínio: Conclusões equivocadas por leitura fragmentada.`},
+  H06:{titulo:"H06 — Diferenciação entre fato e opinião", texto:`Descrição: Distinguir enunciados objetivos de juízos valorativos.
+Benefícios: Fortalece checagem de fontes.
+Consequências do não domínio: Vulnerabilidade a vieses e desinformação.`},
+  H07:{titulo:"H07 — Relações de causa e consequência", texto:`Descrição: Reconhecer encadeamentos lógicos.
+Benefícios: Favorece resumos e argumentação.
+Consequências do não domínio: Explicações lacunosas e justificativas frágeis.`},
+  H08:{titulo:"H08 — Recursos de persuasão", texto:`Descrição: Identificar estratégias de convencimento.
+Benefícios: Consumo crítico de mídia.
+Consequências do não domínio: Aderência a argumentos falaciosos.`},
+  H09:{titulo:"H09 — Variação linguística", texto:`Descrição: Identificar variedades regionais e situacionais.
+Benefícios: Comunicação adequada ao contexto.
+Consequências do não domínio: Ruídos e julgamentos inadequados de registro.`},
+  H10:{titulo:"H10 — Figuras de linguagem", texto:`Descrição: Analisar metáforas, hipérboles etc.
+Benefícios: Enriquecimento interpretativo.
+Consequências do não domínio: Leitura literal empobrecida.`},
+  H11:{titulo:"H11 — Coesão e coerência", texto:`Descrição: Organizar ideias com conectores e progressão temática.
+Benefícios: Clareza e eficácia comunicativa.
+Consequências do não domínio: Textos confusos, rupturas de sentido.`},
+  H12:{titulo:"H12 — Revisão e reescrita", texto:`Descrição: Planejar, revisar e reescrever.
+Benefícios: Redução de erros e melhoria estilística.
+Consequências do não domínio: Manutenção de falhas recorrentes.`},
+  H13:{titulo:"H13 — Ortografia e pontuação", texto:`Descrição: Aplicar convenções ortográficas e pontuação.
+Benefícios: Precisão e compreensão imediata.
+Consequências do não domínio: Ambiguidade e interpretações errôneas.`},
+  H14:{titulo:"H14 — Norma padrão", texto:`Descrição: Empregar a norma padrão quando exigida.
+Benefícios: Desempenho em contextos formais.
+Consequências do não domínio: Limitações em avaliações e ambientes profissionais.`},
+  H15:{titulo:"H15 — Texto e contexto", texto:`Descrição: Relacionar textos a contextos históricos e sociais.
+Benefícios: Interpretação contextualizada.
+Consequências do não domínio: Leitura superficial e descolada da realidade.`}
+};
+const formalMT = {
+  HM01:{titulo:"HM01 — Operações básicas", texto:`Descrição: Propriedades e uso das operações.
+Benefícios: Base para problemas cotidianos.
+Consequências do não domínio: Erros sistemáticos em cálculos simples.`},
+  HM02:{titulo:"HM02 — Adição/Subtração", texto:`Descrição: Modelar e resolver situações com soma e diferença.
+Benefícios: Raciocínio aritmético aplicado.
+Consequências do não domínio: Dificuldade em balanços e comparações.`},
+  HM03:{titulo:"HM03 — Multiplicação", texto:`Descrição: Uso como adição reiterada e escalonamento.
+Benefícios: Agilidade em proporções e taxas.
+Consequências do não domínio: Dimensionamentos e custos imprecisos.`},
+  HM04:{titulo:"HM04 — Divisão", texto:`Descrição: Repartição e quocientes em contextos reais.
+Benefícios: Compreensão de razão e taxa por unidade.
+Consequências do não domínio: Dificuldade em dividir quantidades e interpretar tarifas.`},
+  HM05:{titulo:"HM05 — Frações", texto:`Descrição: Operar e interpretar frações.
+Benefícios: Leitura correta de medidas e repartições.
+Consequências do não domínio: Erros em equivalência/comparação de partes.`},
+  HM06:{titulo:"HM06 — Decimais", texto:`Descrição: Leitura, comparação e operações com decimais.
+Benefícios: Aplicações financeiras e métricas.
+Consequências do não domínio: Arredondamentos inadequados e perdas financeiras.`},
+  HM07:{titulo:"HM07 — Porcentagens", texto:`Descrição: Cálculo de percentuais, descontos e acréscimos.
+Benefícios: Decisões financeiras informadas.
+Consequências do não domínio: Interpretação errada de taxas e promoções.`},
+  HM08:{titulo:"HM08 — Área de figuras", texto:`Descrição: Determinar áreas por fórmulas e decomposição.
+Benefícios: Planejamento de espaços e materiais.
+Consequências do não domínio: Super/subdimensionamento em projetos.`},
+  HM09:{titulo:"HM09 — Geometria plana", texto:`Descrição: Propriedades de ângulos, paralelismo e congruência.
+Benefícios: Raciocínio espacial e provas geométricas.
+Consequências do não domínio: Dificuldade em resolver problemas gráficos.`},
+  HM10:{titulo:"HM10 — Sólidos e volume", texto:`Descrição: Relação de formas 3D com volumes/áreas.
+Benefícios: Embalagem e construção civil.
+Consequências do não domínio: Estimativas incorretas de capacidade.`},
+  HM11:{titulo:"HM11 — Equações de 1º grau", texto:`Descrição: Montar e resolver equações lineares simples.
+Benefícios: Base para modelagem algébrica.
+Consequências do não domínio: Bloqueio em conteúdos posteriores.`},
+  HM12:{titulo:"HM12 — Sistemas lineares", texto:`Descrição: Resolver por substituição, eliminação ou gráfico.
+Benefícios: Análise com múltiplas variáveis.
+Consequências do não domínio: Incapacidade de integrar restrições simultâneas.`},
+  HM13:{titulo:"HM13 — Leitura de gráficos", texto:`Descrição: Interpretar/produzir gráficos usuais.
+Benefícios: Comunicação clara de dados.
+Consequências do não domínio: Conclusões estatísticas equivocadas.`},
+  HM14:{titulo:"HM14 — Funções", texto:`Descrição: Variação, domínio/imagem e modelos.
+Benefícios: Modelagem em ciências e tecnologia.
+Consequências do não domínio: Dificuldade em analisar tendências e taxas.`},
+  HM15:{titulo:"HM15 — Probabilidade", texto:`Descrição: Avaliar chances e combinar eventos.
+Benefícios: Decisão sob incerteza.
+Consequências do não domínio: Intuições enganosas e riscos mal avaliados.`},
+  HM16:{titulo:"HM16 — Estatística básica", texto:`Descrição: Medidas de tendência/variabilidade e leitura crítica.
+Benefícios: Julgamento de pesquisas e relatórios.
+Consequências do não domínio: Generalizações indevidas e vieses de leitura.`},
+  HM17:{titulo:"HM17 — Grandezas e medidas", texto:`Descrição: Converter unidades e estimar medidas.
+Benefícios: Precisão em contextos práticos/labs.
+Consequências do não domínio: Erros de escala e incompatibilidade de unidades.`},
+  HM18:{titulo:"HM18 — Razões e proporções", texto:`Descrição: Resolver problemas proporcionais e escalas.
+Benefícios: Mapas, receitas e concentrações.
+Consequências do não domínio: Cálculos proporcionais incorretos.`},
+  HM19:{titulo:"HM19 — Progressão aritmética (PA)", texto:`Descrição: Termo geral, razão e soma.
+Benefícios: Compreensão de variação linear.
+Consequências do não domínio: Dificuldade com sequências e projeções.`},
+  HM20:{titulo:"HM20 — Progressão geométrica (PG)", texto:`Descrição: Razão, termo geral e crescimento exponencial.
+Benefícios: Modelos de crescimento/juros compostos.
+Consequências do não domínio: Leitura inadequada de processos multiplicativos.`}
+};
+
+/* =============== Carga robusta dos CSVs (auto-detecta vírgula/; ) =============== */
+function papaConfigBase(delimiter) {
+  const cfg = {
+    download: true,
+    header: true,
+    skipEmptyLines: "greedy",
+    dynamicTyping: false,
+    transformHeader: (h) => {
+      const s = normalizeText(h);
+      if (/^estudante/i.test(s)) return "Estudante";
+      if (/^aluno/i.test(s)) return "Estudante";
+      if (/^n[ií]veis? de aprendizagem/i.test(s)) return "Níveis de Aprendizagem";
+      if (/^n[ií]vel(?: de)? aprendizagem/i.test(s)) return "Níveis de Aprendizagem";
+      if (/^componente curricular/i.test(s)) return "Componente Curricular";
+      if (/^disciplina/i.test(s)) return "Componente Curricular";
+      return s; // mantém demais (H/HM etc.)
+    }
   };
+  if (delimiter) cfg.delimiter = delimiter;
+  return cfg;
+}
 
-  // Habilidades Matemática (HM01–HM20)
-  const habilidadesMat = {
-    "HM01": "Compreender operações básicas. Benefício: base sólida para cálculos. Prejuízo: dificuldade em resolver problemas simples.",
-    "HM02": "Resolver problemas de adição e subtração. Benefício: desenvolve raciocínio lógico. Prejuízo: falhas em situações cotidianas.",
-    "HM03": "Utilizar multiplicação em situações práticas. Benefício: agilidade em cálculos. Prejuízo: insegurança em operações básicas.",
-    "HM04": "Aplicar divisão em contextos reais. Benefício: desenvolve raciocínio proporcional. Prejuízo: dificuldade em repartir quantidades.",
-    "HM05": "Resolver problemas com frações. Benefício: compreensão de partes do todo. Prejuízo: limitações em contextos de medidas.",
-    "HM06": "Entender números decimais. Benefício: essencial em finanças e medidas. Prejuízo: erros em cálculos práticos.",
-    "HM07": "Interpretar porcentagens. Benefício: compreensão de descontos e juros. Prejuízo: desvantagem em decisões financeiras.",
-    "HM08": "Calcular áreas de figuras geométricas. Benefício: aplicação em arquitetura e cotidiano. Prejuízo: dificuldade em estimar espaços.",
-    "HM09": "Reconhecer propriedades de figuras planas. Benefício: amplia visão espacial. Prejuízo: falhas em geometria básica.",
-    "HM10": "Trabalhar com sólidos geométricos. Benefício: compreensão de volume e forma. Prejuízo: limitações em construções práticas.",
-    "HM11": "Resolver equações simples. Benefício: base para álgebra. Prejuízo: bloqueios em matemática avançada.",
-    "HM12": "Compreender sistemas de equações. Benefício: desenvolve pensamento algébrico. Prejuízo: incapacidade de lidar com múltiplas variáveis.",
-    "HM13": "Utilizar gráficos em análises. Benefício: interpretação visual de dados. Prejuízo: leitura restrita de informações.",
-    "HM14": "Resolver problemas com funções. Benefício: aplicação em modelos matemáticos. Prejuízo: dificuldade em generalizar situações.",
-    "HM15": "Aplicar conceitos de probabilidade. Benefício: auxilia na tomada de decisões. Prejuízo: vulnerabilidade a interpretações erradas.",
-    "HM16": "Compreender estatística básica. Benefício: análise crítica de informações. Prejuízo: manipulação por dados mal interpretados.",
-    "HM17": "Interpretar grandezas e medidas. Benefício: aplicação em ciências e tecnologia. Prejuízo: falhas em experimentos.",
-    "HM18": "Calcular razões e proporções. Benefício: base para escalas e mapas. Prejuízo: erros em cálculos proporcionais.",
-    "HM19": "Trabalhar com progressões aritméticas. Benefício: compreensão de sequências. Prejuízo: dificuldade em raciocínio sequencial.",
-    "HM20": "Resolver problemas com progressões geométricas. Benefício: aplicação em crescimento exponencial. Prejuízo: limitações em contextos científicos."
-  };
+function parseCSVAttempt(url, delimiter) {
+  return new Promise((resolve) => {
+    Papa.parse(url, {
+      ...papaConfigBase(delimiter),
+      complete: (res) => resolve(res)
+    });
+  });
+}
 
-  let dados = {};
-  let grafico;
+async function parseCSVSmart(url) {
+  // 1) autodetect (sem delimiter)  2) forçar ";"  3) forçar ","
+  const tries = [undefined, ";", ","];
+  for (const d of tries) {
+    const res = await parseCSVAttempt(url, d);
+    const rows = res.data || [];
+    const ok = rows.length > 0 && Object.keys(rows[0] || {}).length > 1;
+    if (ok) return rows;
+  }
+  return [];
+}
 
-  function carregarCSV(turma) {
-    const arquivos = turma === "9ano"
-      ? ["port9.csv", "mat9.csv"]
-      : ["port3.csv", "mat3.csv"];
+/* =============== Estado e leitura =============== */
+let base = { alunos: {}, niveis: {} };
+let chart;
 
-    dados = { alunos: {}, niveis: {} };
+async function carregarCSV(turma) {
+  const arquivos = turma === "9ano" ? ["port9.csv","mat9.csv"] : ["port3.csv","mat3.csv"];
+  base = { alunos: {}, niveis: {} };
 
-    arquivos.forEach(arquivo => {
-      Papa.parse(arquivo, {
-        download: true,
-        header: true,
-        delimiter: ";",
-        complete: function(result) {
-          result.data.forEach(linha => {
-            const aluno = linha["Estudante"];
-            if (!aluno) return;
+  const [dadosA, dadosB] = await Promise.all([parseCSVSmart(arquivos[0]), parseCSVSmart(arquivos[1])]);
+  const todos = [...dadosA, ...dadosB];
 
-            if (!dados.alunos[aluno]) dados.alunos[aluno] = {};
-            if (linha["Componente Curricular"].includes("Português")) {
-              dados.alunos[aluno]["port"] = linha;
-            } else {
-              dados.alunos[aluno]["mat"] = linha;
-            }
-            dados.niveis[aluno] = linha["Níveis de Aprendizagem"];
-          });
+  todos.forEach((linha) => {
+    const aluno = normalizeText(linha["Estudante"]);
+    if (!aluno) return;
 
-          atualizarAlunos();
+    const comp = normalizeText(linha["Componente Curricular"]).toUpperCase();
+    const isMat = /(MATEM|^MAT\b|^MT\b)/.test(comp);
+    if (!base.alunos[aluno]) base.alunos[aluno] = { port: null, mat: null };
+
+    if (isMat) base.alunos[aluno].mat = linha;
+    else base.alunos[aluno].port = linha;
+
+    const nivel = normalizeText(linha["Níveis de Aprendizagem"]);
+    if (nivel) base.niveis[aluno] = nivel;
+  });
+
+  const alunoSelect = document.getElementById("alunoSelect");
+  alunoSelect.innerHTML = '<option value="">Selecione o aluno</option>';
+  Object.keys(base.alunos).sort().forEach(nome => {
+    const opt = document.createElement("option");
+    opt.value = nome;
+    opt.textContent = nome;
+    alunoSelect.appendChild(opt);
+  });
+}
+
+/* =============== Montagem do gráfico =============== */
+function montarHabilidades(linha, tipo) {
+  const mapa = {};
+  if (!linha) return mapa;
+  Object.keys(linha).forEach((ch) => {
+    const k = normalizeSkillKey(ch);
+    if (tipo === "port" && /^H\d{2}$/.test(k))   mapa[k] = parseScoreCell(linha[ch]);
+    if (tipo === "mat"  && /^HM\d{2}$/.test(k))  mapa[k] = parseScoreCell(linha[ch]);
+  });
+  return mapa;
+}
+
+function corNivel(nivel) {
+  const n = (nivel || "").toLowerCase();
+  if (n.includes("pleno"))        return {bg:"bg-green-100", border:"border-l-green-600", badge:"bg-green-600 text-white"};
+  if (n.includes("intermedi"))    return {bg:"bg-yellow-100", border:"border-l-yellow-600", badge:"bg-yellow-600 text-white"};
+  if (n.includes("defas")||n.includes("insuf")) return {bg:"bg-red-100", border:"border-l-red-600", badge:"bg-red-600 text-white"};
+  return {bg:"bg-gray-100", border:"border-l-gray-600", badge:"bg-gray-600 text-white"};
+}
+
+function mostrarAluno(nome) {
+  const registro = base.alunos[nome];
+  if (!registro) return;
+
+  const nivel = base.niveis[nome] || "—";
+  const box = document.getElementById("nivelBox");
+  const badge = document.getElementById("nivelBadge");
+  const text = document.getElementById("nivelText");
+  const cores = corNivel(nivel);
+  box.className = `rounded-xl p-4 shadow bg-white border-l-8 ${cores.border}`;
+  badge.className = `px-3 py-1 rounded-full text-sm font-semibold ${cores.badge}`;
+  badge.textContent = "Nível";
+  text.textContent = `${nome} — ${nivel}`;
+  box.classList.remove("hidden");
+
+  const mapPT = montarHabilidades(registro.port, "port");
+  const mapMT = montarHabilidades(registro.mat, "mat");
+
+  const labels = Array.from(new Set([...Object.keys(mapPT), ...Object.keys(mapMT)])).sort((a,b)=>{
+    const typeA = a.startsWith("HM") ? 1 : 0;
+    const typeB = b.startsWith("HM") ? 1 : 0;
+    if (typeA !== typeB) return typeA - typeB;
+    return parseInt(a.replace(/\D/g,"")) - parseInt(b.replace(/\D/g,""));
+  });
+
+  const dataPT = labels.map(k => mapPT[k]?.value ?? null);
+  const dataMT = labels.map(k => mapMT[k]?.value ?? null);
+
+  if (chart) chart.destroy();
+  const ctx = document.getElementById("graficoAluno").getContext("2d");
+  chart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Português",
+          data: dataPT,
+          backgroundColor: "rgba(34,197,94,0.75)",
+          borderColor: "rgba(22,163,74,1)",
+          borderWidth: 1
+        },
+        {
+          label: "Matemática",
+          data: dataMT,
+          backgroundColor: "rgba(234,88,12,0.80)",
+          borderColor: "rgba(194,65,12,1)",
+          borderWidth: 1
         }
-      });
-    });
-  }
-
-  function atualizarAlunos() {
-    const alunoSelect = document.getElementById("alunoSelect");
-    alunoSelect.innerHTML = '<option value="">Selecione o Aluno</option>';
-    Object.keys(dados.alunos).forEach(aluno => {
-      const opt = document.createElement("option");
-      opt.value = aluno;
-      opt.textContent = aluno;
-      alunoSelect.appendChild(opt);
-    });
-  }
-
-  function mostrarDados(aluno) {
-    const info = dados.alunos[aluno];
-    if (!info) return;
-
-    const nivelBox = document.getElementById("nivelBox");
-    document.getElementById("nivelText").textContent = dados.niveis[aluno];
-    nivelBox.classList.remove("hidden");
-
-    const labels = [];
-    const valoresPort = [];
-    const valoresMat = [];
-
-    for (let h in info.port) {
-      if (h.startsWith("H")) {
-        labels.push(h);
-        valoresPort.push(Number(info.port[h]) || 0);
-      }
-    }
-    for (let h in info.mat) {
-      if (h.startsWith("HM")) {
-        labels.push(h);
-        valoresMat.push(Number(info.mat[h]) || 0);
-      }
-    }
-
-    if (grafico) grafico.destroy();
-
-    const ctx = document.getElementById("graficoAluno").getContext("2d");
-    grafico = new Chart(ctx, {
-      type: "bar",
-      data: {
-        labels: labels,
-        datasets: [
-          { label: "Português", data: valoresPort, backgroundColor: "rgba(34,197,94,0.7)" },
-          { label: "Matemática", data: valoresMat, backgroundColor: "rgba(234,88,12,0.7)" }
-        ]
-      },
-      options: {
-        responsive: false,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { position: "top" },
-          tooltip: {
-            callbacks: {
-              label: (context) => {
-                const habilidade = context.label;
-                return habilidade.startsWith("HM")
-                  ? habilidadesMat[habilidade] || "Sem descrição"
-                  : habilidadesPort[habilidade] || "Sem descrição";
-              }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,             // impede qualquer “pulo” no hover
+      plugins: {
+        legend: { position: "top" },
+        tooltip: {
+          callbacks: {
+            title: (items) => items[0]?.label || "",
+            label: (ctx) => {
+              const code = ctx.label;
+              const isMT = code.startsWith("HM");
+              const curto = isMT ? curtoMT[code] : curtoPT[code];
+              const mPT = montarHabilidades(registro.port, "port");
+              const mMT = montarHabilidades(registro.mat, "mat");
+              const meta = isMT ? mMT[code] : mPT[code];
+              if (!meta) return `${ctx.dataset.label}: ${curto || "Sem descrição"}`;
+              const { hits, total, ratio } = meta;
+              const pct = (ratio !== null) ? ` — ${Math.round(ratio*100)}%` : "";
+              return `${ctx.dataset.label}: ${curto || "Descrição"} — acertos ${hits}/${total}${pct}`;
             }
           }
-        },
-        scales: { y: { beginAtZero: true, max: 4, ticks: { stepSize: 1 } } }
+        }
+      },
+      scales: {
+        y: { beginAtZero: true, max: 4, ticks: { stepSize: 1 } },
+        x: { ticks: { maxRotation: 0, autoSkip: false } }
       }
-    });
-
-    // Exibir descrições abaixo
-    const lista = document.getElementById("listaDescricoes");
-    lista.innerHTML = "";
-    Object.entries({ ...habilidadesPort, ...habilidadesMat }).forEach(([h, desc]) => {
-      const div = document.createElement("div");
-      div.className = "p-3 rounded border " + (h.startsWith("HM") ? "bg-orange-50" : "bg-green-50");
-      div.innerHTML = `<strong>${h}:</strong> ${desc}`;
-      lista.appendChild(div);
-    });
-  }
-
-  document.getElementById("turmaSelect").addEventListener("change", e => {
-    if (e.target.value) carregarCSV(e.target.value);
+    }
   });
 
-  document.getElementById("alunoSelect").addEventListener("change", e => {
-    if (e.target.value) mostrarDados(e.target.value);
+  /* Descrições formais apenas das habilidades presentes para o aluno */
+  const container = document.getElementById("listaDescricoes");
+  container.innerHTML = "";
+  labels.forEach((code) => {
+    const isMT = code.startsWith("HM");
+    const meta = isMT ? formalMT[code] : formalPT[code];
+    if (!meta) return;
+    const card = document.createElement("div");
+    card.className = `p-4 rounded-lg border ${isMT ? "bg-orange-50 border-orange-200" : "bg-green-50 border-green-200"}`;
+    card.innerHTML = `<h4 class="font-semibold mb-1">${meta.titulo}</h4>
+      <pre class="whitespace-pre-wrap text-sm leading-relaxed text-gray-800">${meta.texto}</pre>`;
+    container.appendChild(card);
   });
+}
+
+/* =============== Eventos =============== */
+document.getElementById("turmaSelect").addEventListener("change", (e) => {
+  const turma = e.target.value;
+  document.getElementById("alunoSelect").innerHTML = '<option value="">Selecione o aluno</option>';
+  document.getElementById("listaDescricoes").innerHTML = "";
+  if (chart) chart.destroy();
+  if (turma) carregarCSV(turma);
+});
+
+document.getElementById("alunoSelect").addEventListener("change", (e) => {
+  const nome = e.target.value;
+  if (nome) mostrarAluno(nome);
+});
 </script>
-
 </body>
 </html>
