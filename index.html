@@ -3,9 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <title>Avaliação Diagnóstica 2025</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* Garantir que nada do layout force o canvas a mudar de tamanho */
+    #grafico {
+      display: block;
+    }
+  </style>
 </head>
 <body class="bg-gray-100 min-h-screen p-6">
 
@@ -16,14 +23,14 @@
   </header>
 
   <!-- Seleção -->
-  <div class="flex justify-center gap-4 mb-6">
-    <select id="selectAno" class="p-2 border rounded">
+  <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
+    <select id="selectAno" class="p-2 border rounded w-full sm:w-auto">
       <option value="">Selecione o Ano</option>
       <option value="9">9º Ano</option>
       <option value="3">3ª Série</option>
     </select>
 
-    <select id="selectAluno" class="p-2 border rounded">
+    <select id="selectAluno" class="p-2 border rounded w-full sm:w-auto">
       <option value="">Selecione o Aluno</option>
     </select>
   </div>
@@ -31,122 +38,83 @@
   <!-- Nível de aprendizagem -->
   <div id="nivelBox" class="text-center mb-4 font-semibold text-lg text-gray-700"></div>
 
-  <!-- Gráfico -->
-  <div class="bg-white p-6 rounded-2xl shadow">
-    <!-- ⭐ Altura fixa para o contêiner do gráfico evita loop de resize -->
-    <div id="chartBox" class="h-[420px]"> 
-      <!-- ⭐ canvas SEM atributo height; usamos width/height via CSS para preencher o contêiner -->
-      <canvas id="grafico" class="w-full h-full"></canvas>
-    </div>
+  <!-- Gráfico (fixo, sem resize) -->
+  <div class="bg-white p-6 rounded-2xl shadow overflow-x-auto">
+    <!-- Largura/altura FIXAS no canvas para impedir qualquer encolhimento em hover -->
+    <canvas id="grafico" width="1100" height="420"></canvas>
   </div>
 
   <!-- Descritores -->
   <div id="descritoresBox" class="mt-6 bg-white p-6 rounded-2xl shadow"></div>
 
   <script>
-    // 📌 descritores já preenchidos
+    // Descritores H01–H15 (genéricos, claros para famílias)
     const descritores = {
-      H01: { descricao: "Localizar informações explícitas em textos escritos.", prejuizo: "Sem essa habilidade o aluno terá dificuldade em compreender instruções simples e responder a perguntas diretas." },
-      H02: { descricao: "Inferir informações implícitas em textos.", prejuizo: "Compromete a leitura crítica e a interpretação de mensagens que não estão claramente ditas." },
-      H03: { descricao: "Identificar a ideia principal de um texto.", prejuizo: "O aluno pode não entender o objetivo central do que lê, prejudicando a compreensão global." },
-      H04: { descricao: "Relacionar informações entre diferentes trechos de um texto.", prejuizo: "Afeta a capacidade de construir sentido mais amplo a partir da leitura." },
-      H05: { descricao: "Interpretar gráficos, tabelas e imagens associados a textos.", prejuizo: "Dificulta a leitura de dados, prejudicando o aprendizado em todas as áreas." },
-      H06: { descricao: "Aplicar corretamente regras ortográficas básicas.", prejuizo: "Prejudica a escrita clara e dificulta a comunicação formal." },
-      H07: { descricao: "Usar regras de gramática e pontuação na escrita.", prejuizo: "Compromete a produção de textos coerentes e adequados." },
-      H08: { descricao: "Reconhecer e diferenciar gêneros textuais.", prejuizo: "Dificulta a adaptação da linguagem a situações do cotidiano e escolares." },
-      H09: { descricao: "Efetuar cálculos básicos de adição, subtração, multiplicação e divisão.", prejuizo: "Afeta a autonomia em tarefas práticas como compras e resolução de problemas simples." },
-      H10: { descricao: "Resolver problemas que exigem mais de uma operação.", prejuizo: "Dificulta o raciocínio lógico e a capacidade de planejar estratégias de solução." },
-      H11: { descricao: "Compreender e manipular expressões algébricas.", prejuizo: "Afeta a progressão nos estudos de álgebra e funções no ensino médio." },
-      H12: { descricao: "Resolver equações e inequações simples.", prejuizo: "Compromete a base para aprender conteúdos avançados de matemática." },
-      H13: { descricao: "Reconhecer formas geométricas e aplicar conceitos de geometria.", prejuizo: "Dificulta a compreensão do espaço, medidas e problemas do dia a dia." },
+      H01: { descricao: "Localizar informações explícitas em textos escritos.", prejuizo: "Dificuldade em seguir instruções simples e responder a perguntas diretas." },
+      H02: { descricao: "Inferir informações implícitas em textos.", prejuizo: "Prejudica a leitura crítica e a compreensão de mensagens não ditas explicitamente." },
+      H03: { descricao: "Identificar a ideia principal de um texto.", prejuizo: "Compromete a compreensão global do conteúdo lido." },
+      H04: { descricao: "Relacionar informações entre diferentes trechos de um texto.", prejuizo: "Dificulta integrar ideias e construir sentido amplo." },
+      H05: { descricao: "Interpretar gráficos, tabelas e imagens associados a textos.", prejuizo: "Prejudica a leitura de dados e o entendimento em várias áreas." },
+      H06: { descricao: "Aplicar corretamente regras ortográficas básicas.", prejuizo: "Afeta a clareza da escrita e a comunicação formal." },
+      H07: { descricao: "Usar regras de gramática e pontuação na escrita.", prejuizo: "Gera textos menos coerentes e adequados aos contextos." },
+      H08: { descricao: "Reconhecer e diferenciar gêneros textuais.", prejuizo: "Dificulta adaptar linguagem e formato a diferentes situações." },
+      H09: { descricao: "Efetuar cálculos básicos (adição, subtração, multiplicação e divisão).", prejuizo: "Afeta a autonomia em tarefas práticas do dia a dia." },
+      H10: { descricao: "Resolver problemas que exigem mais de uma operação.", prejuizo: "Prejudica o planejamento de estratégias e o raciocínio lógico." },
+      H11: { descricao: "Compreender e manipular expressões algébricas.", prejuizo: "Dificulta o avanço em álgebra e funções no Ensino Médio." },
+      H12: { descricao: "Resolver equações e inequações simples.", prejuizo: "Compromete a base para conteúdos matemáticos mais avançados." },
+      H13: { descricao: "Reconhecer formas e aplicar conceitos de geometria.", prejuizo: "Dificulta compreender espaço, medidas e problemas práticos." },
       H14: { descricao: "Interpretar e analisar dados estatísticos.", prejuizo: "Limita a leitura crítica de gráficos, pesquisas e notícias." },
-      H15: { descricao: "Resolver problemas envolvendo probabilidade.", prejuizo: "Afeta o raciocínio em situações de incerteza e previsão, comuns no cotidiano." }
+      H15: { descricao: "Resolver problemas envolvendo probabilidade.", prejuizo: "Afeta o raciocínio em situações de incerteza e tomada de decisão." }
     };
+
+    const H_KEYS = Array.from({ length: 15 }, (_, i) => "H" + String(i + 1).padStart(2, "0"));
 
     const selectAno = document.getElementById("selectAno");
     const selectAluno = document.getElementById("selectAluno");
     const nivelBox = document.getElementById("nivelBox");
     const descritoresBox = document.getElementById("descritoresBox");
-    const chartBox = document.getElementById("chartBox");
-    let chart;
+    const canvas = document.getElementById("grafico");
+    let chart = null;
 
-    async function carregarCSV(path) {
+    function getCSV(path) {
       return new Promise(resolve => {
-        Papa.parse(path, {
-          header: true,
-          download: true,
-          complete: results => resolve(results.data)
-        });
+        Papa.parse(path, { header: true, download: true, complete: r => resolve(r.data) });
       });
     }
 
-    // Limpa gráfico com segurança
-    function resetChart() {
+    // Tenta buscar o valor de uma habilidade em diferentes formatos de coluna: "H 01", "H01", "H 1", "H1"
+    function getVal(row, normKey) {
+      const num = normKey.slice(1); // "01"..."15"
+      const forms = [`H ${num}`, `H ${Number(num)}`, `H${num}`, `H${Number(num)}`];
+      for (const k of forms) {
+        if (row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== "") {
+          const v = parseFloat(String(row[k]).replace(",", "."));
+          return isNaN(v) ? 0 : v;
+        }
+      }
+      return 0;
+    }
+
+    // Cria/atualiza o gráfico SEM qualquer responsividade
+    function renderChart(labels, dataPort, dataMat) {
       if (chart) { chart.destroy(); chart = null; }
-      // ⭐ Recria o canvas para garantir estado limpo
-      chartBox.innerHTML = '<canvas id="grafico" class="w-full h-full"></canvas>';
-    }
 
-    // 📌 Carregar lista de alunos
-    selectAno.addEventListener("change", async () => {
-      selectAluno.innerHTML = "<option value=''>Selecione o Aluno</option>";
-      nivelBox.innerHTML = "";
-      descritoresBox.innerHTML = "";
-      resetChart(); // ⭐ garante que o gráfico não fique “reagindo” ao resize do antigo
-
-      if (!selectAno.value) return;
-
-      const [port] = selectAno.value === "9"
-        ? [await carregarCSV("port9.csv")]
-        : [await carregarCSV("port3.csv")];
-
-      const nomes = [...new Set(port.map(r => r.Estudante))].filter(Boolean).sort();
-      nomes.forEach(n => {
-        const opt = document.createElement("option");
-        opt.value = n;
-        opt.textContent = n;
-        selectAluno.appendChild(opt);
-      });
-    });
-
-    // 📌 Carregar dados do aluno
-    selectAluno.addEventListener("change", async () => {
-      if (!selectAluno.value) { resetChart(); return; }
-
-      const [port, mat] = selectAno.value === "9"
-        ? [await carregarCSV("port9.csv"), await carregarCSV("mat9.csv")]
-        : [await carregarCSV("port3.csv"), await carregarCSV("mat3.csv")];
-
-      const dadosPort = port.find(r => r.Estudante === selectAluno.value);
-      const dadosMat = mat.find(r => r.Estudante === selectAluno.value);
-
-      if (!dadosPort || !dadosMat) { resetChart(); return; }
-
-      const habilidades = Object.keys(dadosPort).filter(k => /^H\\s*\\d+/i.test(k) || k.startsWith("H"));
-      // Normaliza rótulos tipo "H 01" -> "H01"
-      const normalizadas = habilidades.map(h => "H" + h.replace(/\\D/g, "").padStart(2, "0"));
-
-      const valoresPort = habilidades.map((h, i) => parseInt(dadosPort[h] || dadosPort[normalizadas[i]] || 0));
-      const valoresMat = habilidades.map((h, i) => parseInt(dadosMat[h] || dadosMat[normalizadas[i]] || 0));
-
-      // Nível de aprendizagem
-      nivelBox.textContent = "Nível de Aprendizagem: " + (dadosPort["Níveis de Aprendizagem"] || "");
-
-      resetChart(); // ⭐ cria um canvas novinho
-      const ctx = document.getElementById("grafico").getContext("2d");
+      const ctx = canvas.getContext("2d");
       chart = new Chart(ctx, {
         type: "bar",
         data: {
-          labels: normalizadas,
+          labels,
           datasets: [
-            { label: "Português", data: valoresPort, backgroundColor: "rgba(59,130,246,0.9)" },
-            { label: "Matemática", data: valoresMat, backgroundColor: "rgba(239,68,68,0.9)" }
+            { label: "Português", data: dataPort, backgroundColor: "rgba(59,130,246,0.95)" },
+            { label: "Matemática", data: dataMat, backgroundColor: "rgba(239,68,68,0.95)" }
           ]
         },
         options: {
-          responsive: true,
-          maintainAspectRatio: false, // ⭐ usa a altura fixa do contêiner
-          resizeDelay: 150,           // ⭐ evita “loop” de resize em alguns navegadores
+          // >>> Sem responsividade nem adaptação de aspecto <<<
+          responsive: false,
+          maintainAspectRatio: false,
+          animation: false,
+          interaction: { mode: "index", intersect: false },
           plugins: {
             legend: { labels: { font: { size: 16 } } },
             tooltip: { enabled: true }
@@ -157,17 +125,73 @@
           }
         }
       });
+    }
 
-      // Descritores
-      descritoresBox.innerHTML = "<h3 class='text-lg font-semibold mb-4'>Descritores</h3>";
-      normalizadas.forEach(h => {
+    // Carrega lista de alunos conforme o ano
+    selectAno.addEventListener("change", async () => {
+      selectAluno.innerHTML = "<option value=''>Selecione o Aluno</option>";
+      nivelBox.textContent = "";
+      descritoresBox.innerHTML = "";
+      if (chart) { chart.destroy(); chart = null; } // garante estado limpo
+
+      if (!selectAno.value) return;
+
+      const portPath = selectAno.value === "9" ? "port9.csv" : "port3.csv";
+      const port = await getCSV(portPath);
+      const nomes = [...new Set(port.map(r => r.Estudante))].filter(Boolean).sort();
+
+      for (const n of nomes) {
+        const opt = document.createElement("option");
+        opt.value = n;
+        opt.textContent = n;
+        selectAluno.appendChild(opt);
+      }
+    });
+
+    // Carrega dados do aluno e desenha gráfico
+    selectAluno.addEventListener("change", async () => {
+      if (!selectAluno.value) {
+        nivelBox.textContent = "";
+        descritoresBox.innerHTML = "";
+        if (chart) { chart.destroy(); chart = null; }
+        return;
+      }
+
+      const is9 = selectAno.value === "9";
+      const port = await getCSV(is9 ? "port9.csv" : "port3.csv");
+      const mat  = await getCSV(is9 ? "mat9.csv"  : "mat3.csv");
+
+      const dadosPort = port.find(r => r.Estudante === selectAluno.value);
+      const dadosMat  = mat.find(r  => r.Estudante === selectAluno.value);
+
+      if (!dadosPort || !dadosMat) {
+        nivelBox.textContent = "Dados não encontrados para este aluno.";
+        descritoresBox.innerHTML = "";
+        if (chart) { chart.destroy(); chart = null; }
+        return;
+      }
+
+      // Nível de aprendizagem (do CSV de Português)
+      nivelBox.textContent = "Nível de Aprendizagem: " + (dadosPort["Níveis de Aprendizagem"] || "");
+
+      // Valores (ordem H01…H15)
+      const valoresPort = H_KEYS.map(h => getVal(dadosPort, h));
+      const valoresMat  = H_KEYS.map(h => getVal(dadosMat,  h));
+
+      // Desenha o gráfico fixo (sem redimensionar)
+      renderChart(H_KEYS, valoresPort, valoresMat);
+
+      // Lista de descritores
+      let html = "<h3 class='text-lg font-semibold mb-4'>Descritores</h3>";
+      for (const h of H_KEYS) {
         const d = descritores[h];
-        descritoresBox.innerHTML += `
-          <div class='border-b pb-2 mb-2'>
-            <p class='font-bold'>${h} - ${d?.descricao || ""}</p>
-            <p class='text-sm text-gray-600'>${d?.prejuizo || ""}</p>
+        html += `
+          <div class="border-b pb-2 mb-2">
+            <p class="font-bold">${h} - ${d.descricao}</p>
+            <p class="text-sm text-gray-600">${d.prejuizo}</p>
           </div>`;
-      });
+      }
+      descritoresBox.innerHTML = html;
     });
   </script>
 </body>
