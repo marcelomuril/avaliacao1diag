@@ -1,57 +1,183 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Avaliação Diagnóstica 2025</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>1ª Avaliação Diagnóstica 2025</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="bg-gray-100 min-h-screen p-6">
-
-  <!-- Cabeçalho -->
-  <header class="text-center mb-6">
-    <h1 class="text-3xl font-bold text-blue-800">CCM SEBASTIÃO PARANÁ</h1>
-    <h2 class="text-xl text-gray-700">1º AVALIAÇÃO DIAGNÓSTICA 2025</h2>
+<body class="bg-gray-50 text-gray-800">
+  <header class="bg-blue-800 text-white p-6 text-center shadow-md">
+    <h1 class="text-2xl font-bold">CCM SEBASTIÃO PARANÁ</h1>
+    <h2 class="text-lg">1ª AVALIAÇÃO DIAGNÓSTICA 2025</h2>
   </header>
 
-  <!-- Seleção -->
-  <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
-    <select id="selectAno" class="p-2 border rounded w-full sm:w-auto">
-      <option value="">Selecione o Ano</option>
-      <option value="9">9º Ano</option>
-      <option value="3">3ª Série</option>
-    </select>
+  <main class="max-w-5xl mx-auto p-6">
+    <div class="mb-4">
+      <label class="block mb-2 font-semibold">Selecione o Ano Escolar:</label>
+      <select id="anoSelect" class="p-2 border rounded w-full">
+        <option value="">-- Escolha --</option>
+        <option value="9">9º Ano Fundamental</option>
+        <option value="3">3ª Série Ensino Médio</option>
+      </select>
+    </div>
 
-    <select id="selectAluno" class="p-2 border rounded w-full sm:w-auto">
-      <option value="">Selecione o Aluno</option>
-    </select>
-  </div>
+    <div class="mb-4">
+      <label class="block mb-2 font-semibold">Selecione o Aluno:</label>
+      <select id="alunoSelect" class="p-2 border rounded w-full">
+        <option value="">-- Escolha --</option>
+      </select>
+    </div>
 
-  <!-- Nível de aprendizagem -->
-  <div id="nivelBox" class="text-center mb-4 font-semibold text-lg text-gray-700"></div>
-
-  <!-- Gráfico -->
-  <div class="bg-white p-6 rounded-2xl shadow overflow-x-auto">
-    <canvas id="grafico" width="1100" height="420"></canvas>
-  </div>
+    <div class="bg-white shadow-lg rounded-lg p-4">
+      <canvas id="grafico" class="w-full h-[400px]"></canvas>
+    </div>
+  </main>
 
   <script>
-    // Descritores + prejuízos
+    // Arquivos CSV por ano
+    const arquivos = {
+      9: { port: "port9.csv", mat: "mat9.csv" },
+      3: { port: "port3.csv", mat: "mat3.csv" }
+    };
+
+    // Descrições genéricas das habilidades
     const descritores = {
-      H01: { desc: "Localizar informações explícitas em textos escritos.", prej: "Dificuldade em compreender instruções e textos simples do dia a dia." },
-      H02: { desc: "Inferir informações implícitas em textos.", prej: "Pode não captar mensagens indiretas ou ironias em textos." },
-      H03: { desc: "Identificar a ideia principal de um texto.", prej: "Tende a se perder em detalhes e não compreender o propósito central do texto." },
-      H04: { desc: "Relacionar informações entre diferentes trechos de um texto.", prej: "Dificuldade em construir sentido global de textos mais longos." },
-      H05: { desc: "Interpretar gráficos, tabelas e imagens associados a textos.", prej: "Limitações na leitura de dados visuais e compreensão de relatórios." },
-      H06: { desc: "Aplicar corretamente regras ortográficas básicas.", prej: "Prejudica a clareza na comunicação escrita." },
-      H07: { desc: "Usar regras de gramática e pontuação na escrita.", prej: "Pode gerar textos confusos e de difícil compreensão." },
-      H08: { desc: "Reconhecer e diferenciar gêneros textuais.", prej: "Dificuldade em adaptar a linguagem a diferentes contextos sociais." },
-      H09: { desc: "Efetuar cálculos básicos (adição, subtração, multiplicação e divisão).", prej: "Compromete atividades cotidianas que exigem raciocínio numérico." },
-      H10: { desc: "Resolver problemas que exigem mais de uma operação.", prej: "Dificuldade em interpretar e resolver problemas matemáticos reais." },
-      H11: { desc: "Compreender e manipular expressões algébricas.", prej: "Limita o desenvolvimento em conteúdos mais avançados de matemática." },
-      H12: { desc: "Resolver equações e inequações simples.", prej: "Compromete a capacidade de lidar com situações matemáticas mais complexas." },
-      H13: { desc: "Reconhecer formas e aplicar conceitos de geometria.", prej: "Dificuldade em compreender espaço, medidas e construções geométricas." },
-      H14: { desc: "Interpretar e analisar dados estatísticos.", prej: "Limita a compreensão crítica de informações em gráficos e pesquisas." },
-      H15: { desc: "Resolver problemas envolvendo probabilidade.", prej: "Compromete a análise de situações de incerte
+      H01: "Localizar informações explícitas em textos.",
+      H02: "Inferir informações implícitas em textos.",
+      H03: "Identificar a ideia principal de um texto.",
+      H04: "Relacionar informações entre trechos de um texto.",
+      H05: "Interpretar gráficos, tabelas e imagens.",
+      H06: "Aplicar corretamente regras ortográficas.",
+      H07: "Usar regras de gramática e pontuação.",
+      H08: "Reconhecer e diferenciar gêneros textuais.",
+      H09: "Efetuar cálculos básicos de operações.",
+      H10: "Resolver problemas com mais de uma operação.",
+      H11: "Compreender e manipular expressões algébricas.",
+      H12: "Resolver equações e inequações simples.",
+      H13: "Reconhecer e aplicar conceitos de geometria.",
+      H14: "Interpretar e analisar dados estatísticos.",
+      H15: "Resolver problemas envolvendo probabilidade."
+    };
+
+    let dadosPort = [], dadosMat = [];
+    let grafico = null;
+
+    const anoSelect = document.getElementById("anoSelect");
+    const alunoSelect = document.getElementById("alunoSelect");
+    const ctx = document.getElementById("grafico").getContext("2d");
+
+    // Carrega os CSVs
+    function carregarCSVs(ano) {
+      return new Promise(resolve => {
+        let { port, mat } = arquivos[ano];
+        Papa.parse(port, {
+          download: true,
+          header: true,
+          complete: results => {
+            dadosPort = results.data;
+            Papa.parse(mat, {
+              download: true,
+              header: true,
+              complete: results2 => {
+                dadosMat = results2.data;
+                resolve();
+              }
+            });
+          }
+        });
+      });
+    }
+
+    // Preenche lista de alunos
+    function preencherAlunos() {
+      alunoSelect.innerHTML = '<option value="">-- Escolha --</option>';
+      dadosPort.forEach(linha => {
+        if (linha["Estudante"]) {
+          let opt = document.createElement("option");
+          opt.value = linha["Estudante"];
+          opt.textContent = linha["Estudante"];
+          alunoSelect.appendChild(opt);
+        }
+      });
+    }
+
+    // Gera gráfico
+    function gerarGrafico(aluno) {
+      let linhaPort = dadosPort.find(l => l["Estudante"] === aluno);
+      let linhaMat = dadosMat.find(l => l["Estudante"] === aluno);
+
+      if (!linhaPort || !linhaMat) return;
+
+      let labels = [];
+      let valoresPort = [];
+      let valoresMat = [];
+
+      for (let i = 1; i <= 15; i++) {
+        let col = "H " + String(i).padStart(2, "0");
+        labels.push("H" + String(i).padStart(2, "0"));
+        valoresPort.push(parseInt(linhaPort[col] || 0));
+        valoresMat.push(parseInt(linhaMat[col] || 0));
+      }
+
+      if (grafico) grafico.destroy();
+
+      grafico = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: "Português",
+              data: valoresPort,
+              backgroundColor: "rgba(37, 99, 235, 0.7)"
+            },
+            {
+              label: "Matemática",
+              data: valoresMat,
+              backgroundColor: "rgba(234, 88, 12, 0.7)"
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  let habilidade = context.label;
+                  let desc = descritores[habilidade] || "";
+                  return context.dataset.label + ": " + context.raw + " → " + desc;
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: "Acertos" }
+            }
+          }
+        }
+      });
+    }
+
+    // Eventos
+    anoSelect.addEventListener("change", async () => {
+      if (anoSelect.value) {
+        await carregarCSVs(anoSelect.value);
+        preencherAlunos();
+      }
+    });
+
+    alunoSelect.addEventListener("change", () => {
+      if (alunoSelect.value) {
+        gerarGrafico(alunoSelect.value);
+      }
+    });
+  </script>
+</body>
+</html>
