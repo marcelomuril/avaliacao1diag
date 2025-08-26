@@ -4,238 +4,254 @@
   <meta charset="UTF-8">
   <title>Avaliação Diagnóstica 2025</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <style>
     body {
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      margin: 0;
-      padding: 0;
-      background-color: #f9fafb;
+      font-family: Arial, sans-serif;
+      margin: 0; padding: 0;
+      background: #f9f9f9;
       color: #333;
     }
     header {
-      background: linear-gradient(90deg, #2b6cb0, #38a169);
+      background: #1f3c88;
       color: white;
       padding: 20px;
       text-align: center;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
     }
-    h1 {
-      margin: 0;
-      font-size: 1.8rem;
-    }
-    h2 {
-      margin: 5px 0 0;
-      font-weight: normal;
-    }
-    .container {
-      max-width: 1000px;
-      margin: auto;
-      padding: 20px;
-    }
+    h1 { margin: 0; font-size: 24px; }
+    h2 { margin: 5px 0 0; font-size: 18px; }
+    .container { padding: 20px; }
     select {
-      display: block;
-      margin: 15px 0;
       padding: 10px;
-      border-radius: 12px;
-      border: 1px solid #ccc;
-      background: #fff;
-      font-size: 1rem;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      transition: border 0.3s, box-shadow 0.3s;
+      margin: 10px 5px;
+      border-radius: 6px;
+      border: 1px solid #aaa;
+      font-size: 14px;
     }
-    select:hover {
-      border: 1px solid #2b6cb0;
-      box-shadow: 0 2px 8px rgba(56, 161, 105, 0.3);
-    }
-    canvas {
-      max-width: 100%;
+    .aluno-info {
       margin: 20px 0;
-    }
-    #infoAluno {
-      font-size: 1.2rem;
-      font-weight: bold;
-      color: #2b6cb0;
-      margin: 15px 0;
-    }
-    .descricoes {
-      margin-top: 30px;
-    }
-    .habilidade {
-      padding: 12px;
+      padding: 15px;
       border-radius: 8px;
-      margin-bottom: 8px;
+      font-weight: bold;
+      text-align: center;
+      font-size: 16px;
+      color: white;
     }
-    .habilidade:nth-child(odd) {
-      background: #edf2f7;
+    .nivel-alto { background: #2e7d32; }
+    .nivel-medio { background: #ef6c00; }
+    .nivel-baixo { background: #c62828; }
+    canvas { max-width: 1000px; margin: 20px auto; display: block; }
+    .tabs { display: flex; margin-top: 20px; }
+    .tab {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      cursor: pointer;
+      font-weight: bold;
+      border: 1px solid #ccc;
+      background: #eee;
     }
-    .habilidade:nth-child(even) {
-      background: #e6fffa;
+    .tab.active {
+      background: #1f3c88;
+      color: white;
     }
-    .habilidade strong {
-      display: block;
-      color: #2b6cb0;
-      margin-bottom: 5px;
+    .tab-content { display: none; margin-top: 10px; }
+    .tab-content.active { display: block; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
     }
+    td {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+    }
+    tr:nth-child(even) { background: #f0f4f8; }
+    tr:nth-child(odd) { background: #ffffff; }
   </style>
 </head>
 <body>
   <header>
-    <h1>CCM Sebastião Paraná</h1>
+    <h1>CCM SEBASTIÃO PARANÁ</h1>
     <h2>1ª Avaliação Diagnóstica 2025</h2>
   </header>
 
   <div class="container">
-    <label for="turmaSelect">Selecione a turma:</label>
+    <label>Selecione a turma:</label>
     <select id="turmaSelect">
       <option value="">-- Escolha --</option>
-      <option value="9ano">9º Ano Fundamental</option>
-      <option value="3serie">3ª Série Ensino Médio</option>
+      <option value="9ano">9º Ano</option>
+      <option value="3serie">3ª Série EM</option>
     </select>
 
-    <label for="alunoSelect">Selecione o aluno:</label>
-    <select id="alunoSelect">
-      <option value="">-- Escolha um aluno --</option>
-    </select>
+    <label>Selecione o aluno:</label>
+    <select id="alunoSelect"></select>
 
-    <div id="infoAluno"></div>
+    <div id="alunoInfo"></div>
     <canvas id="grafico"></canvas>
-    <div id="descricoes" class="descricoes"></div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="bom">Bom Desempenho</div>
+      <div class="tab" data-tab="deficit">Déficit</div>
+    </div>
+    <div id="bom" class="tab-content active"></div>
+    <div id="deficit" class="tab-content"></div>
   </div>
 
-  <script>
-    const arquivos = {
-      "9ano": ["port9.csv", "mat9.csv"],
-      "3serie": ["port3.csv", "mat3.csv"]
-    };
+<script>
+const habilidades = {
+  portugues: {
+    "H01": "Compreensão de textos literários. Importância: desenvolve a sensibilidade estética e a leitura crítica. Prejuízo: limita a capacidade de interpretar diferentes gêneros.",
+    "H02": "Identificação da ideia principal em textos. Importância: essencial para compreensão global. Prejuízo: dificulta estudos em todas as áreas.",
+    "H03": "Reconhecimento de informações explícitas. Importância: base da interpretação. Prejuízo: compromete a assimilação de instruções básicas.",
+    "H04": "Inferência de informações implícitas. Importância: promove leitura crítica. Prejuízo: impede entendimento aprofundado de textos.",
+    "H05": "Uso de elementos coesivos. Importância: garante clareza. Prejuízo: redações tornam-se confusas.",
+    "H06": "Identificação de efeitos de sentido. Importância: amplia compreensão literária. Prejuízo: leitura literal e superficial.",
+    "H07": "Reconhecimento de variações linguísticas. Importância: respeita diversidade. Prejuízo: dificulta comunicação adequada.",
+    "H08": "Identificação de gêneros textuais. Importância: orienta produção de textos. Prejuízo: inadequação na escrita.",
+    "H09": "Leitura de textos argumentativos. Importância: sustenta opiniões. Prejuízo: reduz capacidade de argumentação.",
+    "H10": "Compreensão de textos informativos. Importância: fundamenta estudos. Prejuízo: afeta desempenho acadêmico geral.",
+    "H11": "Reconhecimento de figuras de linguagem. Importância: amplia interpretação. Prejuízo: leitura simplificada.",
+    "H12": "Identificação da função da linguagem. Importância: orienta interpretação. Prejuízo: distorções comunicativas.",
+    "H13": "Análise sintática básica. Importância: estruturação da escrita. Prejuízo: frases desconexas.",
+    "H14": "Ortografia e acentuação. Importância: norma culta. Prejuízo: prejuízo em provas e comunicação formal.",
+    "H15": "Produção textual coesa. Importância: clareza e lógica. Prejuízo: dificulta comunicação escrita."
+  },
+  matematica: {
+    "HM01": "Operações básicas com números naturais. Importância: base de toda matemática. Prejuízo: compromete cálculos futuros.",
+    "HM02": "Resolução de problemas simples. Importância: aplicação prática. Prejuízo: impede lidar com situações cotidianas.",
+    "HM03": "Frações e decimais. Importância: fundamental em medidas. Prejuízo: dificulta cálculos financeiros.",
+    "HM04": "Proporções e razões. Importância: compreensão de escalas. Prejuízo: compromete ciências e economia.",
+    "HM05": "Porcentagem. Importância: finanças pessoais. Prejuízo: erros em cálculos do dia a dia.",
+    "HM06": "Equações do 1º grau. Importância: base da álgebra. Prejuízo: limita avanço escolar.",
+    "HM07": "Sistema de equações. Importância: resolução de problemas complexos. Prejuízo: impede análise matemática.",
+    "HM08": "Geometria plana. Importância: visão espacial. Prejuízo: dificuldade em interpretar mapas e projetos.",
+    "HM09": "Geometria espacial. Importância: compreensão do espaço físico. Prejuízo: limita engenharia e arquitetura.",
+    "HM10": "Medidas de comprimento, área e volume. Importância: cotidiano e profissões. Prejuízo: cálculos imprecisos.",
+    "HM11": "Grandezas e medidas. Importância: interdisciplinaridade. Prejuízo: afeta física e química.",
+    "HM12": "Estatística básica. Importância: interpretação de dados. Prejuízo: reduz leitura crítica da realidade.",
+    "HM13": "Probabilidade. Importância: raciocínio lógico. Prejuízo: impede análise de riscos.",
+    "HM14": "Funções do 1º grau. Importância: compreensão de gráficos. Prejuízo: bloqueio em economia e física.",
+    "HM15": "Funções do 2º grau. Importância: fenômenos naturais. Prejuízo: limita ciência e engenharia.",
+    "HM16": "Progressões aritméticas. Importância: padrões numéricos. Prejuízo: reduz habilidade em cálculos avançados.",
+    "HM17": "Progressões geométricas. Importância: crescimento exponencial. Prejuízo: falta de visão matemática.",
+    "HM18": "Trigonometria básica. Importância: cálculos em ângulos. Prejuízo: limita arquitetura e tecnologia.",
+    "HM19": "Análise combinatória. Importância: contagem sistemática. Prejuízo: prejudica estatística.",
+    "HM20": "Introdução ao cálculo. Importância: avanços em exatas. Prejuízo: impede prosseguimento acadêmico."
+  }
+};
 
-    const dadosCSV = { "9ano": [], "3serie": [] };
+let chart;
 
-    // Descritores genéricos
-    const descritoresPort = {};
-    for (let i = 1; i <= 15; i++) {
-      const num = String(i).padStart(2, "0");
-      descritoresPort["H " + num] = `Português H ${num}: Habilidade de leitura/interpretação. Importante para desenvolver compreensão textual; dificuldades nessa habilidade comprometem estudos em todas as áreas.`;
-    }
-
-    const descritoresMat = {};
-    for (let i = 1; i <= 20; i++) {
-      const num = String(i).padStart(2, "0");
-      descritoresMat["HM " + num] = `Matemática HM ${num}: Competência de raciocínio lógico ou cálculo. Essencial para resolver problemas práticos; ausência dessa habilidade pode gerar dificuldades no aprendizado futuro.`;
-    }
-
-    const turmaSelect = document.getElementById("turmaSelect");
-    const alunoSelect = document.getElementById("alunoSelect");
-    const ctx = document.getElementById("grafico").getContext("2d");
-    const infoAluno = document.getElementById("infoAluno");
-    let chart;
-
-    // Carregar dados CSV
-    Object.keys(arquivos).forEach(turma => {
-      arquivos[turma].forEach(arq => {
-        Papa.parse(arq, {
-          download: true,
-          header: true,
-          skipEmptyLines: true,
-          delimiter: ";",
-          complete: res => {
-            res.data.forEach(linha => {
-              dadosCSV[turma].push(linha);
-            });
-          }
-        });
-      });
-    });
-
-    turmaSelect.addEventListener("change", () => {
-      alunoSelect.innerHTML = "<option value=''>-- Escolha um aluno --</option>";
-      infoAluno.innerHTML = "";
-      const turma = turmaSelect.value;
-      if (turma && dadosCSV[turma]) {
-        const alunos = [...new Set(dadosCSV[turma].map(l => l.Estudante))];
-        alunos.forEach(aluno => {
-          const opt = document.createElement("option");
-          opt.value = aluno;
-          opt.textContent = aluno;
-          alunoSelect.appendChild(opt);
-        });
+function carregarCSV(turma, callback) {
+  let arquivos = {
+    "9ano": ["port9.csv", "mat9.csv"],
+    "3serie": ["port3.csv", "mat3.csv"]
+  };
+  let dados = {};
+  let count = 0;
+  arquivos[turma].forEach((arq, i) => {
+    Papa.parse(arq, {
+      download: true, header: true, delimiter: ";",
+      complete: (res) => {
+        dados[i===0 ? "portugues":"matematica"] = res.data;
+        count++;
+        if (count===2) callback(dados);
       }
     });
+  });
+}
 
-    alunoSelect.addEventListener("change", () => {
-      const turma = turmaSelect.value;
-      const aluno = alunoSelect.value;
-      if (!turma || !aluno) return;
+document.getElementById("turmaSelect").addEventListener("change", function() {
+  let turma = this.value;
+  if (!turma) return;
+  carregarCSV(turma, (dados)=>{
+    let alunos = [...new Set(dados.portugues.map(a=>a.Estudante))];
+    let select = document.getElementById("alunoSelect");
+    select.innerHTML = "<option value=''>-- Escolha --</option>";
+    alunos.forEach(a=>{
+      let opt = document.createElement("option");
+      opt.value = a; opt.textContent = a;
+      select.appendChild(opt);
+    });
+    select.onchange = ()=>{
+      let nome = select.value;
+      if (!nome) return;
+      mostrarAluno(nome, dados);
+    }
+  });
+});
 
-      const dadosAluno = dadosCSV[turma].filter(l => l.Estudante === aluno);
+function mostrarAluno(nome, dados){
+  let alunoP = dados.portugues.find(a=>a.Estudante===nome);
+  let alunoM = dados.matematica.find(a=>a.Estudante===nome);
+  let nivel = alunoP["Níveis de Aprendizagem"] || alunoM["Níveis de Aprendizagem"] || "Não informado";
 
-      if (!dadosAluno.length) return;
+  let div = document.getElementById("alunoInfo");
+  let classe = nivel.includes("Alto")?"nivel-alto":(nivel.includes("Médio")?"nivel-medio":"nivel-baixo");
+  div.className = "aluno-info "+classe;
+  div.textContent = nome+" — Nível de Aprendizagem: "+nivel;
 
-      // Mostrar nome + nível de aprendizagem
-      const nivel = dadosAluno[0]["Níveis de Aprendizagem"] || "Nível não informado";
-      infoAluno.textContent = `${aluno} – ${nivel}`;
+  let labels=[], acertosP=[], acertosM=[];
+  Object.keys(alunoP).forEach(k=>{
+    if(k.startsWith("H")){ labels.push(k); acertosP.push(parseInt(alunoP[k]||0)); }
+  });
+  Object.keys(alunoM).forEach(k=>{
+    if(k.startsWith("HM")){ labels.push(k); acertosM.push(parseInt(alunoM[k]||0)); }
+  });
 
-      // Montar dados para gráfico
-      const labels = [];
-      const valores = [];
-
-      dadosAluno.forEach(linha => {
-        Object.keys(linha).forEach(key => {
-          if (key.startsWith("H ")) {
-            labels.push(key);
-            valores.push(parseInt(linha[key]) || 0);
-          } else if (key.startsWith("HM")) {
-            labels.push(key);
-            valores.push(parseInt(linha[key]) || 0);
-          }
-        });
-      });
-
-      if (chart) chart.destroy();
-      chart = new Chart(ctx, {
-        type: "bar",
-        data: {
-          labels: labels,
-          datasets: [{
-            label: "Desempenho do Aluno",
-            data: valores,
-            backgroundColor: labels.map(l => l.startsWith("H ") ? "#2b6cb0aa" : "#38a169aa"),
-            borderColor: labels.map(l => l.startsWith("H ") ? "#2b6cb0" : "#38a169"),
-            borderWidth: 1
-          }]
-        },
-        options: {
-          scales: {
-            y: {
-              beginAtZero: true,
-              max: 5,
-              ticks: { stepSize: 1 }
-            }
-          },
-          plugins: {
-            tooltip: {
-              callbacks: {
-                label: ctx => {
-                  const key = ctx.label;
-                  const desc = descritoresPort[key] || descritoresMat[key] || "Sem descrição disponível.";
-                  return `${key}: ${ctx.formattedValue} – ${desc}`;
-                }
-              }
+  if(chart) chart.destroy();
+  let ctx = document.getElementById("grafico").getContext("2d");
+  chart = new Chart(ctx,{
+    type:"bar",
+    data:{
+      labels: labels,
+      datasets:[
+        {label:"Português", data: acertosP, backgroundColor:"rgba(54,162,235,0.7)"},
+        {label:"Matemática", data: acertosM, backgroundColor:"rgba(255,140,0,0.8)"}
+      ]
+    },
+    options:{
+      responsive:true,
+      scales:{ y:{beginAtZero:true, max:5}},
+      plugins:{
+        tooltip:{
+          callbacks:{
+            label:(ctx)=>{
+              let habilidade = ctx.label;
+              let desc = habilidades.portugues[habilidade] || habilidades.matematica[habilidade] || "Sem descrição";
+              return habilidade+": "+ctx.parsed.y+" acertos — "+desc;
             }
           }
         }
-      });
+      }
+    }
+  });
 
-      // descrições abaixo
-      const descrDiv = document.getElementById("descricoes");
-      descrDiv.innerHTML = "";
-      labels.forEach((habilidade, i) => {
-        const div = document.createElement("div");
-        div.className = "habilidade";
-        div.innerHTML = `<strong>${habilidade}</strong> ${descritoresPort[habilidade] || descritoresMat[habilidade] || "Sem descrição disponível."}`;
-        descrDiv.appendChild(div);
-      });
-    });
-  </script>
+  // Preencher abas
+  let bom="", deficit="";
+  for(let h in habilidades.portugues){
+    let val = parseInt(alunoP[h]||0);
+    let texto = `<tr><td><b>${h}</b> — ${habilidades.portugues[h]}</td></tr>`;
+    if(val>=3) bom+=texto; else deficit+=texto;
+  }
+  for(let h in habilidades.matematica){
+    let val = parseInt(alunoM[h]||0);
+    let texto = `<tr><td><b>${h}</b> — ${habilidades.matematica[h]}</td></tr>`;
+    if(val>=3) bom+=texto; else deficit+=texto;
+  }
+  document.getElementById("bom").innerHTML = "<table>"+bom+"</table>";
+  document.getElementById("deficit").innerHTML = "<table>"+deficit+"</table>";
+}
+
+document.querySelectorAll(".tab").forEach(tab=>{
+  tab.addEventListener("click", function(){
+    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+    document.querySelectorAll(".tab-content").forEach(c=>c.classList.remove("active"));
+    this.classList.add("active");
+    document.getElementById(this.dataset.tab).classList.add("active");
+  });
+});
+</script>
 </body>
 </html>
