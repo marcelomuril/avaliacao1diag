@@ -2,104 +2,190 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Avaliação Diagnóstica 2025</title>
+  <title>1ª Avaliação Diagnóstica 2025</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-50 text-gray-800">
+<body class="bg-gray-100 text-gray-900">
+
   <!-- Cabeçalho -->
-  <header class="bg-blue-900 text-white py-6 shadow-lg">
-    <h1 class="text-center text-3xl font-bold">CCM Sebastião Paraná</h1>
-    <h2 class="text-center text-xl mt-2">1ª Avaliação Diagnóstica 2025</h2>
+  <header class="bg-blue-900 text-white p-6 shadow-lg">
+    <h1 class="text-3xl font-bold">CCM SEBASTIÃO PARANÁ</h1>
+    <h2 class="text-xl mt-2">1ª Avaliação Diagnóstica 2025</h2>
   </header>
 
-  <main class="p-6 max-w-6xl mx-auto">
-    <!-- Seleção -->
-    <div class="flex flex-col md:flex-row gap-4 mb-6">
-      <select id="turmaSelect" class="p-3 border rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-blue-500">
-        <option value="">Selecione a turma</option>
-        <option value="9ano">9º Ano</option>
-        <option value="3serie">3ª Série EM</option>
+  <main class="max-w-6xl mx-auto p-6">
+    <!-- Seleção de turma e aluno -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <select id="turmaSelect" class="p-3 rounded-lg border text-lg">
+        <option value="">Selecione a Turma</option>
+        <option value="9ano">9º Ano Fundamental</option>
+        <option value="3serie">3ª Série Ensino Médio</option>
       </select>
 
-      <select id="alunoSelect" class="p-3 border rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-blue-500">
-        <option value="">Selecione o aluno</option>
+      <select id="alunoSelect" class="p-3 rounded-lg border text-lg">
+        <option value="">Selecione o Aluno</option>
       </select>
     </div>
 
-    <!-- Caixa com nome e nível -->
-    <div id="infoAluno" class="hidden p-4 bg-green-100 border-l-4 border-green-500 rounded mb-6">
-      <h3 class="text-lg font-semibold">Aluno: <span id="nomeAluno"></span></h3>
-      <p class="text-green-800 font-bold">Nível de Aprendizagem: <span id="nivelAprendizagem"></span></p>
+    <!-- Nível de aprendizagem -->
+    <div id="nivelBox" class="hidden bg-green-100 border-l-4 border-green-600 p-4 mb-6 rounded">
+      <p><strong>Nível de Aprendizagem:</strong> <span id="nivelText"></span></p>
     </div>
 
     <!-- Gráfico -->
     <div class="bg-white p-6 rounded-xl shadow mb-6">
-      <canvas id="graficoAluno"></canvas>
+      <canvas id="graficoAluno" width="1000" height="400"></canvas>
     </div>
 
     <!-- Descrições -->
-    <div id="descricoes" class="space-y-4"></div>
+    <div id="descricoes" class="bg-white p-6 rounded-xl shadow">
+      <h3 class="text-xl font-semibold mb-4">Descrições das Habilidades</h3>
+      <div id="listaDescricoes" class="space-y-4"></div>
+    </div>
   </main>
 
-  <script>
-    let dadosPortugues = [], dadosMatematica = [];
-    const habilidades = {
-      // Português H01–H15
-      "H01": "Localizar informações explícitas em textos. Importância: base para a leitura funcional. Prejuízo: compromete a compreensão de enunciados simples.",
-      "H02": "Inferir informações implícitas em textos. Importância: desenvolve interpretação crítica. Prejuízo: dificulta entender mensagens não literais.",
-      "H03": "Identificar o tema de um texto. Importância: organiza a leitura. Prejuízo: leitura fragmentada, sem compreensão global.",
-      "H04": "Distinguir fato de opinião. Importância: promove pensamento crítico. Prejuízo: pode gerar interpretações equivocadas.",
-      "H05": "Reconhecer efeitos de sentido do uso de recursos linguísticos. Importância: amplia leitura. Prejuízo: leitura superficial.",
-      "H06": "Identificar finalidade de textos. Importância: orienta usos sociais da leitura. Prejuízo: mau uso da informação.",
-      "H07": "Estabelecer relações de causa e consequência. Importância: favorece análise lógica. Prejuízo: limita raciocínio dedutivo.",
-      "H08": "Identificar elementos coesivos. Importância: garante compreensão textual. Prejuízo: dificuldade em textos longos.",
-      "H09": "Interpretar metáforas e figuras de linguagem. Importância: favorece leitura literária. Prejuízo: empobrecimento cultural.",
-      "H10": "Reconhecer variedades linguísticas. Importância: respeito à diversidade. Prejuízo: discriminação e incompreensão.",
-      "H11": "Analisar argumentos em textos de opinião. Importância: promove cidadania crítica. Prejuízo: fragilidade em debates.",
-      "H12": "Reconhecer gêneros textuais. Importância: orienta produção textual. Prejuízo: inadequação comunicativa.",
-      "H13": "Identificar recursos de persuasão. Importância: defesa contra manipulação. Prejuízo: maior vulnerabilidade social.",
-      "H14": "Avaliar fidedignidade de fontes. Importância: combate fake news. Prejuízo: risco de desinformação.",
-      "H15": "Produzir textos coerentes. Importância: comunicação efetiva. Prejuízo: limitação na vida acadêmica e profissional.",
+<script>
+  // Habilidades Português (H01–H15)
+  const habilidadesPort = {
+    "H01": "Compreender a ideia principal de textos curtos. Benefício: facilita leitura autônoma. Prejuízo: dificuldades em interpretar informações básicas.",
+    "H02": "Identificar informações explícitas em um texto. Benefício: melhora a compreensão detalhada. Prejuízo: perda de informações importantes.",
+    "H03": "Inferir informações implícitas em um texto. Benefício: desenvolve leitura crítica. Prejuízo: limita interpretação em contextos complexos.",
+    "H04": "Reconhecer o gênero textual e sua finalidade. Benefício: amplia competências comunicativas. Prejuízo: dificuldades em ajustar a linguagem.",
+    "H05": "Interpretar gráficos e tabelas em textos. Benefício: melhora análise de dados. Prejuízo: compreensão restrita de informações quantitativas.",
+    "H06": "Distinguir fatos de opiniões. Benefício: fortalece senso crítico. Prejuízo: risco de confundir julgamentos com informações objetivas.",
+    "H07": "Estabelecer relações de causa e consequência. Benefício: organiza o raciocínio. Prejuízo: dificuldades em compreender progressões lógicas.",
+    "H08": "Identificar recursos de persuasão. Benefício: fortalece a cidadania crítica. Prejuízo: vulnerabilidade a manipulações.",
+    "H09": "Reconhecer variações linguísticas. Benefício: respeito à diversidade cultural. Prejuízo: preconceitos linguísticos e limitações de comunicação.",
+    "H10": "Analisar o uso de figuras de linguagem. Benefício: amplia repertório literário. Prejuízo: empobrecimento da interpretação estética.",
+    "H11": "Produzir textos coerentes e coesos. Benefício: melhora comunicação escrita. Prejuízo: dificuldade em estruturar ideias.",
+    "H12": "Revisar e reescrever textos. Benefício: aprimora clareza e correção. Prejuízo: manutenção de erros recorrentes.",
+    "H13": "Utilizar pontuação e ortografia corretamente. Benefício: assegura clareza. Prejuízo: falhas de entendimento em leitura e escrita.",
+    "H14": "Aplicar normas gramaticais. Benefício: fortalece domínio da língua. Prejuízo: limitações em contextos formais.",
+    "H15": "Relacionar textos com seu contexto histórico-social. Benefício: amplia visão crítica. Prejuízo: leitura superficial e descontextualizada."
+  };
 
-      // Matemática HM01–HM20
-      "HM01": "Ler e interpretar gráficos simples. Importância: uso cotidiano. Prejuízo: dificuldade em compreender dados básicos.",
-      "HM02": "Resolver operações com números naturais. Importância: base da aritmética. Prejuízo: fragilidade em cálculos simples.",
-      "HM03": "Resolver problemas com as quatro operações. Importância: raciocínio lógico. Prejuízo: limitações em situações diárias.",
-      "HM04": "Compreender múltiplos e divisores. Importância: fundamenta frações. Prejuízo: compromete estudos posteriores.",
-      "HM05": "Utilizar frações em problemas. Importância: proporções. Prejuízo: falhas em medidas e receitas.",
-      "HM06": "Relacionar frações, decimais e porcentagens. Importância: vida financeira. Prejuízo: dificuldade em cálculos cotidianos.",
-      "HM07": "Resolver problemas de proporcionalidade. Importância: regra de três. Prejuízo: falhas em finanças e medidas.",
-      "HM08": "Calcular médias. Importância: análise de dados. Prejuízo: incompreensão estatística.",
-      "HM09": "Resolver equações do 1º grau. Importância: base da álgebra. Prejuízo: dificuldade em resolver problemas algébricos.",
-      "HM10": "Compreender equações do 2º grau. Importância: funções quadráticas. Prejuízo: impede avanços em matemática.",
-      "HM11": "Identificar funções lineares. Importância: modelagem matemática. Prejuízo: falhas em interpretação de gráficos.",
-      "HM12": "Trabalhar com sistemas lineares. Importância: múltiplas variáveis. Prejuízo: impede estudos avançados.",
-      "HM13": "Calcular área de figuras planas. Importância: vida prática. Prejuízo: erros em construções e projetos.",
-      "HM14": "Calcular volume de sólidos. Importância: ciências aplicadas. Prejuízo: dificuldades em engenharia básica.",
-      "HM15": "Interpretar escalas. Importância: mapas e plantas. Prejuízo: dificuldade em localização espacial.",
-      "HM16": "Resolver problemas com ângulos. Importância: geometria. Prejuízo: falhas em raciocínio espacial.",
-      "HM17": "Utilizar teorema de Pitágoras. Importância: cálculo geométrico. Prejuízo: barreiras em trigonometria.",
-      "HM18": "Resolver problemas de probabilidade. Importância: análise de risco. Prejuízo: limitações em decisões informadas.",
-      "HM19": "Resolver problemas de estatística básica. Importância: compreensão de dados. Prejuízo: vulnerabilidade à manipulação.",
-      "HM20": "Interpretar funções exponenciais. Importância: crescimento populacional/financeiro. Prejuízo: incompreensão de fenômenos modernos."
-    };
+  // Habilidades Matemática (HM01–HM20)
+  const habilidadesMat = {
+    "HM01": "Compreender operações básicas. Benefício: base sólida para cálculos. Prejuízo: dificuldade em resolver problemas simples.",
+    "HM02": "Resolver problemas de adição e subtração. Benefício: desenvolve raciocínio lógico. Prejuízo: falhas em situações cotidianas.",
+    "HM03": "Utilizar multiplicação em situações práticas. Benefício: agilidade em cálculos. Prejuízo: insegurança em operações básicas.",
+    "HM04": "Aplicar divisão em contextos reais. Benefício: desenvolve raciocínio proporcional. Prejuízo: dificuldade em repartir quantidades.",
+    "HM05": "Resolver problemas com frações. Benefício: compreensão de partes do todo. Prejuízo: limitações em contextos de medidas.",
+    "HM06": "Entender números decimais. Benefício: essencial em finanças e medidas. Prejuízo: erros em cálculos práticos.",
+    "HM07": "Interpretar porcentagens. Benefício: compreensão de descontos e juros. Prejuízo: desvantagem em decisões financeiras.",
+    "HM08": "Calcular áreas de figuras geométricas. Benefício: aplicação em arquitetura e cotidiano. Prejuízo: dificuldade em estimar espaços.",
+    "HM09": "Reconhecer propriedades de figuras planas. Benefício: amplia visão espacial. Prejuízo: falhas em geometria básica.",
+    "HM10": "Trabalhar com sólidos geométricos. Benefício: compreensão de volume e forma. Prejuízo: limitações em construções práticas.",
+    "HM11": "Resolver equações simples. Benefício: base para álgebra. Prejuízo: bloqueios em matemática avançada.",
+    "HM12": "Compreender sistemas de equações. Benefício: desenvolve pensamento algébrico. Prejuízo: incapacidade de lidar com múltiplas variáveis.",
+    "HM13": "Utilizar gráficos em análises. Benefício: interpretação visual de dados. Prejuízo: leitura restrita de informações.",
+    "HM14": "Resolver problemas com funções. Benefício: aplicação em modelos matemáticos. Prejuízo: dificuldade em generalizar situações.",
+    "HM15": "Aplicar conceitos de probabilidade. Benefício: auxilia na tomada de decisões. Prejuízo: vulnerabilidade a interpretações erradas.",
+    "HM16": "Compreender estatística básica. Benefício: análise crítica de informações. Prejuízo: manipulação por dados mal interpretados.",
+    "HM17": "Interpretar grandezas e medidas. Benefício: aplicação em ciências e tecnologia. Prejuízo: falhas em experimentos.",
+    "HM18": "Calcular razões e proporções. Benefício: base para escalas e mapas. Prejuízo: erros em cálculos proporcionais.",
+    "HM19": "Trabalhar com progressões aritméticas. Benefício: compreensão de sequências. Prejuízo: dificuldade em raciocínio sequencial.",
+    "HM20": "Resolver problemas com progressões geométricas. Benefício: aplicação em crescimento exponencial. Prejuízo: limitações em contextos científicos."
+  };
 
-    // Configuração do gráfico
-    const ctx = document.getElementById('graficoAluno').getContext('2d');
-    let grafico = new Chart(ctx, {
-      type: 'bar',
-      data: { labels: [], datasets: [] },
+  let dados = {};
+  let grafico;
+
+  function carregarCSV(turma) {
+    const arquivos = turma === "9ano"
+      ? ["port9.csv", "mat9.csv"]
+      : ["port3.csv", "mat3.csv"];
+
+    dados = { alunos: {}, niveis: {} };
+
+    arquivos.forEach(arquivo => {
+      Papa.parse(arquivo, {
+        download: true,
+        header: true,
+        delimiter: ";",
+        complete: function(result) {
+          result.data.forEach(linha => {
+            const aluno = linha["Estudante"];
+            if (!aluno) return;
+
+            if (!dados.alunos[aluno]) dados.alunos[aluno] = {};
+            if (linha["Componente Curricular"].includes("Português")) {
+              dados.alunos[aluno]["port"] = linha;
+            } else {
+              dados.alunos[aluno]["mat"] = linha;
+            }
+            dados.niveis[aluno] = linha["Níveis de Aprendizagem"];
+          });
+
+          atualizarAlunos();
+        }
+      });
+    });
+  }
+
+  function atualizarAlunos() {
+    const alunoSelect = document.getElementById("alunoSelect");
+    alunoSelect.innerHTML = '<option value="">Selecione o Aluno</option>';
+    Object.keys(dados.alunos).forEach(aluno => {
+      const opt = document.createElement("option");
+      opt.value = aluno;
+      opt.textContent = aluno;
+      alunoSelect.appendChild(opt);
+    });
+  }
+
+  function mostrarDados(aluno) {
+    const info = dados.alunos[aluno];
+    if (!info) return;
+
+    const nivelBox = document.getElementById("nivelBox");
+    document.getElementById("nivelText").textContent = dados.niveis[aluno];
+    nivelBox.classList.remove("hidden");
+
+    const labels = [];
+    const valoresPort = [];
+    const valoresMat = [];
+
+    for (let h in info.port) {
+      if (h.startsWith("H")) {
+        labels.push(h);
+        valoresPort.push(Number(info.port[h]) || 0);
+      }
+    }
+    for (let h in info.mat) {
+      if (h.startsWith("HM")) {
+        labels.push(h);
+        valoresMat.push(Number(info.mat[h]) || 0);
+      }
+    }
+
+    if (grafico) grafico.destroy();
+
+    const ctx = document.getElementById("graficoAluno").getContext("2d");
+    grafico = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [
+          { label: "Português", data: valoresPort, backgroundColor: "rgba(34,197,94,0.7)" },
+          { label: "Matemática", data: valoresMat, backgroundColor: "rgba(234,88,12,0.7)" }
+        ]
+      },
       options: {
-        responsive: true,
+        responsive: false,
+        maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'top' },
+          legend: { position: "top" },
           tooltip: {
             callbacks: {
-              title: (context) => context[0].label,
-              label: (context) => habilidades[context.label] || "Sem descrição disponível"
+              label: (context) => {
+                const habilidade = context.label;
+                return habilidade.startsWith("HM")
+                  ? habilidadesMat[habilidade] || "Sem descrição"
+                  : habilidadesPort[habilidade] || "Sem descrição";
+              }
             }
           }
         },
@@ -107,76 +193,25 @@
       }
     });
 
-    // Carregar CSVs
-    function carregarCSV(url, destino) {
-      Papa.parse(url, {
-        download: true,
-        header: true,
-        delimiter: ";",
-        complete: (results) => destino.push(...results.data)
-      });
-    }
-    carregarCSV("port9.csv", dadosPortugues);
-    carregarCSV("mat9.csv", dadosMatematica);
-    carregarCSV("port3.csv", dadosPortugues);
-    carregarCSV("mat3.csv", dadosMatematica);
-
-    // Atualizar lista de alunos
-    document.getElementById('turmaSelect').addEventListener('change', (e) => {
-      const turma = e.target.value;
-      const alunos = (turma === "9ano" ? dadosPortugues : dadosMatematica)
-        .map(l => l.Estudante).filter((v, i, a) => a.indexOf(v) === i);
-      const sel = document.getElementById('alunoSelect');
-      sel.innerHTML = "<option value=''>Selecione o aluno</option>";
-      alunos.forEach(a => {
-        const opt = document.createElement('option');
-        opt.value = a; opt.textContent = a; sel.appendChild(opt);
-      });
+    // Exibir descrições abaixo
+    const lista = document.getElementById("listaDescricoes");
+    lista.innerHTML = "";
+    Object.entries({ ...habilidadesPort, ...habilidadesMat }).forEach(([h, desc]) => {
+      const div = document.createElement("div");
+      div.className = "p-3 rounded border " + (h.startsWith("HM") ? "bg-orange-50" : "bg-green-50");
+      div.innerHTML = `<strong>${h}:</strong> ${desc}`;
+      lista.appendChild(div);
     });
+  }
 
-    // Atualizar gráfico e descrições
-    document.getElementById('alunoSelect').addEventListener('change', (e) => {
-      const aluno = e.target.value;
-      if (!aluno) return;
+  document.getElementById("turmaSelect").addEventListener("change", e => {
+    if (e.target.value) carregarCSV(e.target.value);
+  });
 
-      const port = dadosPortugues.find(d => d.Estudante === aluno);
-      const mat = dadosMatematica.find(d => d.Estudante === aluno);
+  document.getElementById("alunoSelect").addEventListener("change", e => {
+    if (e.target.value) mostrarDados(e.target.value);
+  });
+</script>
 
-      document.getElementById("infoAluno").classList.remove("hidden");
-      document.getElementById("nomeAluno").textContent = aluno;
-      document.getElementById("nivelAprendizagem").textContent = port?.["Níveis de Aprendizagem"] || mat?.["Níveis de Aprendizagem"] || "Não informado";
-
-      const labels = [];
-      const dadosP = [], dadosM = [];
-
-      if (port) {
-        Object.keys(port).forEach(k => {
-          if (k.startsWith("H")) { labels.push(k); dadosP.push(parseInt(port[k]) || 0); dadosM.push(0); }
-        });
-      }
-      if (mat) {
-        Object.keys(mat).forEach(k => {
-          if (k.startsWith("HM")) { labels.push(k); dadosM.push(parseInt(mat[k]) || 0); dadosP.push(0); }
-        });
-      }
-
-      grafico.data.labels = labels;
-      grafico.data.datasets = [
-        { label: "Português", data: dadosP, backgroundColor: "rgba(37, 99, 235, 0.7)" },
-        { label: "Matemática", data: dadosM, backgroundColor: "rgba(234, 88, 12, 0.7)" }
-      ];
-      grafico.update();
-
-      // Listar descrições formais
-      const div = document.getElementById("descricoes");
-      div.innerHTML = "";
-      labels.forEach(h => {
-        const p = document.createElement("p");
-        p.className = "p-3 border-b";
-        p.innerHTML = `<strong>${h}:</strong> ${habilidades[h] || "Sem descrição disponível."}`;
-        div.appendChild(p);
-      });
-    });
-  </script>
 </body>
 </html>
