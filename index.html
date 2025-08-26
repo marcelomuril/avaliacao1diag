@@ -8,7 +8,10 @@
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
     header { text-align: center; margin-bottom: 20px; }
-    #grafico { max-width: 100%; height: 400px; }
+    #grafico { width: 100%; height: 450px; }
+    .deficit { margin-top: 20px; padding: 10px; background: #f8f8f8; border-radius: 8px; }
+    .deficit h3 { margin-top: 15px; }
+    .deficit ul { margin-left: 20px; }
   </style>
 </head>
 <body>
@@ -27,55 +30,60 @@
   <label for="alunoSelect">Selecione o aluno:</label>
   <select id="alunoSelect"></select>
 
-  <div style="width:100%; height:400px;">
+  <div style="width:100%; height:450px;">
     <canvas id="grafico"></canvas>
   </div>
 
-  <div id="descritores"></div>
+  <div id="descritores" class="deficit"></div>
 
 <script>
+// ----------------- DESCRITORES -----------------
 const descritoresPort = {
-  "P01": "Identificar informações diretas em textos.",
-  "P02": "Reconhecer tema principal de um texto.",
-  "P03": "Inferir informações implícitas.",
-  "P04": "Interpretar metáforas ou sentidos figurados.",
-  "P05": "Reconhecer propósito de um texto.",
-  "P06": "Identificar gênero textual.",
-  "P07": "Distinguir fato de opinião.",
-  "P08": "Relacionar informações entre textos.",
-  "P09": "Analisar argumentos apresentados.",
-  "P10": "Identificar a ideia central de parágrafos.",
-  "P11": "Inferir sentimentos e intenções do autor.",
-  "P12": "Relacionar imagens e legendas.",
-  "P13": "Compreender vocabulário no contexto.",
-  "P14": "Reconhecer relações de causa e consequência.",
-  "P15": "Sintetizar informações de diferentes partes."
+  "H01": {def:"Identificar informações explícitas no texto.", prej:"Sem essa habilidade, o aluno terá dificuldade em compreender instruções simples e conteúdos básicos."},
+  "H02": {def:"Reconhecer o tema principal.", prej:"Sem dominar, o aluno não consegue identificar o foco central do texto."},
+  "H03": {def:"Inferir informações implícitas.", prej:"Prejudica a interpretação crítica e a leitura entre linhas."},
+  "H04": {def:"Interpretar metáforas e sentidos figurados.", prej:"Limita a compreensão de textos literários e expressivos."},
+  "H05": {def:"Reconhecer propósito comunicativo.", prej:"Sem isso, o aluno não entende a intenção do autor."},
+  "H06": {def:"Identificar gênero textual.", prej:"Dificulta saber como ler e interpretar cada tipo de texto."},
+  "H07": {def:"Distinguir fato de opinião.", prej:"Afeta a análise crítica de informações e fake news."},
+  "H08": {def:"Relacionar informações entre textos.", prej:"Compromete a comparação e construção de argumentos."},
+  "H09": {def:"Analisar argumentos.", prej:"Enfraquece a capacidade de avaliar a validade de opiniões."},
+  "H10": {def:"Identificar ideia central em parágrafos.", prej:"O aluno não consegue resumir e sintetizar informações."},
+  "H11": {def:"Inferir sentimentos e intenções do autor.", prej:"Afeta a sensibilidade e interpretação de textos literários."},
+  "H12": {def:"Relacionar imagens e legendas.", prej:"Prejudica a leitura multimodal (texto + imagem)."},
+  "H13": {def:"Compreender vocabulário em contexto.", prej:"Dificulta expandir repertório e autonomia leitora."},
+  "H14": {def:"Reconhecer causa e consequência.", prej:"Afeta a lógica e a compreensão de sequências textuais."},
+  "H15": {def:"Sintetizar informações de partes diferentes.", prej:"Prejudica a elaboração de resumos e textos próprios."}
 };
 
 const descritoresMat = {
-  "M01": "Efetuar cálculos básicos de adição e subtração.",
-  "M02": "Resolver multiplicações e divisões simples.",
-  "M03": "Compreender o sistema de numeração decimal.",
-  "M04": "Resolver problemas com números inteiros.",
-  "M05": "Trabalhar com frações e decimais.",
-  "M06": "Calcular porcentagens em situações práticas.",
-  "M07": "Interpretar gráficos e tabelas.",
-  "M08": "Resolver problemas com grandezas proporcionais.",
-  "M09": "Aplicar medidas de tempo, massa e comprimento.",
-  "M10": "Reconhecer figuras geométricas planas.",
-  "M11": "Calcular perímetro e área de figuras.",
-  "M12": "Identificar sólidos geométricos.",
-  "M13": "Aplicar simetria e transformações geométricas.",
-  "M14": "Resolver equações do 1º grau.",
-  "M15": "Resolver sistemas de equações.",
-  "M16": "Interpretar funções e gráficos.",
-  "M17": "Aplicar probabilidade em situações práticas.",
-  "M18": "Resolver problemas com estatística básica."
+  "HM01": {def:"Efetuar cálculos básicos.", prej:"Sem isso, há dificuldades em operações cotidianas."},
+  "HM02": {def:"Resolver multiplicações e divisões.", prej:"Afeta problemas simples do dia a dia."},
+  "HM03": {def:"Compreender o sistema decimal.", prej:"Sem domínio, não entende valores e medidas."},
+  "HM04": {def:"Resolver problemas com inteiros.", prej:"Dificulta interpretar ganhos e perdas."},
+  "HM05": {def:"Trabalhar com frações e decimais.", prej:"Prejudica receitas, medidas e cálculos práticos."},
+  "HM06": {def:"Calcular porcentagens.", prej:"Afeta cálculos de descontos e juros."},
+  "HM07": {def:"Interpretar gráficos e tabelas.", prej:"Limita análise de dados e informações visuais."},
+  "HM08": {def:"Resolver proporções.", prej:"Dificulta regras de três e escalas."},
+  "HM09": {def:"Aplicar medidas.", prej:"Prejudica noções de tempo, massa e comprimento."},
+  "HM10": {def:"Reconhecer figuras planas.", prej:"Sem isso, perde noções de espaço geométrico."},
+  "HM11": {def:"Calcular perímetro e área.", prej:"Dificulta medições de espaços físicos."},
+  "HM12": {def:"Identificar sólidos geométricos.", prej:"Afeta percepção espacial e tridimensional."},
+  "HM13": {def:"Usar simetria e transformações.", prej:"Prejudica compreensão de padrões visuais."},
+  "HM14": {def:"Resolver equações do 1º grau.", prej:"Afeta resolução de problemas algébricos básicos."},
+  "HM15": {def:"Resolver sistemas de equações.", prej:"Compromete resolução de problemas complexos."},
+  "HM16": {def:"Interpretar funções e gráficos.", prej:"Limita noções de crescimento e variação."},
+  "HM17": {def:"Aplicar probabilidade.", prej:"Prejudica tomada de decisões com incerteza."},
+  "HM18": {def:"Usar estatística básica.", prej:"Afeta leitura crítica de dados sociais."},
+  "HM19": {def:"Resolver problemas financeiros simples.", prej:"Compromete cálculos de gastos e orçamento."},
+  "HM20": {def:"Relacionar grandezas em situações práticas.", prej:"Sem isso, não aplica matemática no cotidiano."}
 };
 
+// ----------------- VARIÁVEIS -----------------
 let dadosCSV = {};
 let chart = null;
 
+// ----------------- FUNÇÕES -----------------
 function carregarCSV() {
   const arquivos = {
     "port9": "port9.csv",
@@ -89,13 +97,10 @@ function carregarCSV() {
       header: true,
       skipEmptyLines: true,
       complete: results => {
-        // normaliza os nomes das colunas
         results.meta.fields = results.meta.fields.map(h => h.trim());
         results.data = results.data.map(row => {
           const novo = {};
-          for (let k in row) {
-            if (row.hasOwnProperty(k)) novo[k.trim()] = row[k];
-          }
+          for (let k in row) if (row.hasOwnProperty(k)) novo[k.trim()] = row[k];
           return novo;
         });
         dadosCSV[key] = results.data;
@@ -126,16 +131,20 @@ function carregarGrafico() {
   const port = dadosCSV["port"+ano].find(l => l.Estudante === aluno);
   const mat = dadosCSV["mat"+ano].find(l => l.Estudante === aluno);
 
-  const portData = Object.keys(descritoresPort).map((h,i)=>{
+  const portLabels = Object.keys(descritoresPort);
+  const matLabels = Object.keys(descritoresMat);
+
+  const portData = portLabels.map((h,i)=>{
     const col = `H ${String(i+1).padStart(2,"0")}`;
     return parseInt(port?.[col] || 0);
   });
-  const matData = Object.keys(descritoresMat).map((h,i)=>{
-    const col = `H ${String(i+1).padStart(2,"0")}`;
+
+  const matData = matLabels.map((h,i)=>{
+    const col = `HM ${String(i+1).padStart(2,"0")}`;
     return parseInt(mat?.[col] || 0);
   });
 
-  const labels = [...Object.keys(descritoresPort), ...Object.keys(descritoresMat)];
+  const labels = [...portLabels, ...matLabels];
 
   const ctx = document.getElementById("grafico").getContext("2d");
   if (chart) chart.destroy();
@@ -144,5 +153,50 @@ function carregarGrafico() {
     data: {
       labels: labels,
       datasets: [
-        { label:"Português", data:[...portData, ...Array(18).fill(null)], backgroundColor:"rgba(54,162,235,0.7)" },
-        { label:
+        { label:"Português", data:[...portData, ...Array(matLabels.length).fill(null)], backgroundColor:"rgba(54,162,235,0.7)" },
+        { label:"Matemática", data:[...Array(portLabels.length).fill(null), ...matData], backgroundColor:"rgba(255,99,132,0.7)" }
+      ]
+    },
+    options: {
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        tooltip:{
+          callbacks:{
+            label: ctx=>{
+              const key = ctx.label;
+              const descr = descritoresPort[key] || descritoresMat[key];
+              return `${descr?.def || ""} → Acertos: ${ctx.formattedValue}`;
+            }
+          }
+        }
+      },
+      scales:{ y:{ beginAtZero:true } }
+    }
+  });
+
+  // ------------ LISTA DE DÉFICITS ------------
+  let html = "<h3>⚠️ Habilidades em déficit (≤ 50% de acertos)</h3>";
+  html += "<ul>";
+
+  portLabels.forEach((h,i)=>{
+    const val = portData[i];
+    if (val <= 50) html += `<li><b>${h}</b> – ${descritoresPort[h].def}. <i>Prejuízo:</i> ${descritoresPort[h].prej}</li>`;
+  });
+
+  matLabels.forEach((h,i)=>{
+    const val = matData[i];
+    if (val <= 50) html += `<li><b>${h}</b> – ${descritoresMat[h].def}. <i>Prejuízo:</i> ${descritoresMat[h].prej}</li>`;
+  });
+
+  html += "</ul>";
+  document.getElementById("descritores").innerHTML = html;
+}
+
+// ----------------- EVENTOS -----------------
+document.getElementById("anoSelect").addEventListener("change", atualizarAlunos);
+document.getElementById("alunoSelect").addEventListener("change", carregarGrafico);
+carregarCSV();
+</script>
+</body>
+</html>
