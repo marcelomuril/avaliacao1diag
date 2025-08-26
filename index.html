@@ -2,201 +2,243 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>1ª Avaliação Diagnóstica 2025</title>
+  <title>Avaliação Diagnóstica 2025</title>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    header { text-align: center; margin-bottom: 20px; }
-    #grafico { width: 100%; height: 450px; }
-    .deficit { margin-top: 20px; padding: 10px; background: #f8f8f8; border-radius: 8px; }
-    .deficit h3 { margin-top: 15px; }
-    .deficit ul { margin-left: 20px; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0; padding: 0;
+      background: #f8f9fa;
+      color: #333;
+    }
+    header {
+      background: #2f4050;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+    .container {
+      padding: 20px;
+      max-width: 1100px;
+      margin: auto;
+    }
+    select {
+      padding: 8px;
+      margin: 10px 5px;
+      font-size: 16px;
+    }
+    #grafico {
+      background: white;
+      padding: 20px;
+      margin: 20px auto;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      height: 450px !important;
+    }
+    h3 {
+      margin-top: 40px;
+      color: #2f4050;
+      border-left: 6px solid #2f4050;
+      padding-left: 10px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    table tr:nth-child(even) { background: #f1f1f1; }
+    table tr:nth-child(odd) { background: #ffffff; }
+    table td {
+      padding: 10px;
+      vertical-align: top;
+    }
+    table td:first-child {
+      font-weight: bold;
+      width: 80px;
+      color: #2f4050;
+    }
   </style>
 </head>
 <body>
   <header>
-    <h1>CCM SEBASTIÃO PARANÁ</h1>
-    <h2>1ª Avaliação Diagnóstica 2025</h2>
+    CCM SEBASTIÃO PARANÁ – 1ª AVALIAÇÃO DIAGNÓSTICA 2025
   </header>
 
-  <label for="anoSelect">Selecione o ano:</label>
-  <select id="anoSelect">
-    <option value="">-- Escolha --</option>
-    <option value="9">9º Ano</option>
-    <option value="3">3ª Série</option>
-  </select>
+  <div class="container">
+    <label for="anoSelect">Selecione o ano:</label>
+    <select id="anoSelect" onchange="carregarAlunos()">
+      <option value="">-- Selecione --</option>
+      <option value="9">9º Ano</option>
+      <option value="3">3ª Série EM</option>
+    </select>
 
-  <label for="alunoSelect">Selecione o aluno:</label>
-  <select id="alunoSelect"></select>
+    <label for="alunoSelect">Selecione o aluno:</label>
+    <select id="alunoSelect" onchange="carregarGrafico()">
+      <option value="">-- Selecione --</option>
+    </select>
 
-  <div style="width:100%; height:450px;">
     <canvas id="grafico"></canvas>
+    <div id="descritores"></div>
   </div>
 
-  <div id="descritores" class="deficit"></div>
+  <script>
+    let dadosCSV = {};
+    let chart;
 
-<script>
-// ----------------- DESCRITORES -----------------
-const descritoresPort = {
-  "H01": {def:"Identificar informações explícitas no texto.", prej:"Sem essa habilidade, o aluno terá dificuldade em compreender instruções simples e conteúdos básicos."},
-  "H02": {def:"Reconhecer o tema principal.", prej:"Sem dominar, o aluno não consegue identificar o foco central do texto."},
-  "H03": {def:"Inferir informações implícitas.", prej:"Prejudica a interpretação crítica e a leitura entre linhas."},
-  "H04": {def:"Interpretar metáforas e sentidos figurados.", prej:"Limita a compreensão de textos literários e expressivos."},
-  "H05": {def:"Reconhecer propósito comunicativo.", prej:"Sem isso, o aluno não entende a intenção do autor."},
-  "H06": {def:"Identificar gênero textual.", prej:"Dificulta saber como ler e interpretar cada tipo de texto."},
-  "H07": {def:"Distinguir fato de opinião.", prej:"Afeta a análise crítica de informações e fake news."},
-  "H08": {def:"Relacionar informações entre textos.", prej:"Compromete a comparação e construção de argumentos."},
-  "H09": {def:"Analisar argumentos.", prej:"Enfraquece a capacidade de avaliar a validade de opiniões."},
-  "H10": {def:"Identificar ideia central em parágrafos.", prej:"O aluno não consegue resumir e sintetizar informações."},
-  "H11": {def:"Inferir sentimentos e intenções do autor.", prej:"Afeta a sensibilidade e interpretação de textos literários."},
-  "H12": {def:"Relacionar imagens e legendas.", prej:"Prejudica a leitura multimodal (texto + imagem)."},
-  "H13": {def:"Compreender vocabulário em contexto.", prej:"Dificulta expandir repertório e autonomia leitora."},
-  "H14": {def:"Reconhecer causa e consequência.", prej:"Afeta a lógica e a compreensão de sequências textuais."},
-  "H15": {def:"Sintetizar informações de partes diferentes.", prej:"Prejudica a elaboração de resumos e textos próprios."}
-};
+    const descritoresPort = {
+      "H01": "Identificar informações diretas em um texto. Prejuízo: dificuldade em compreender instruções simples.",
+      "H02": "Inferir informações implícitas. Prejuízo: limita a interpretação de textos.",
+      "H03": "Reconhecer tema ou ideia central. Prejuízo: compreensão global deficiente.",
+      "H04": "Relacionar partes do texto. Prejuízo: dificuldade em seguir narrativas longas.",
+      "H05": "Identificar finalidade de textos. Prejuízo: confusão ao lidar com documentos do dia a dia.",
+      "H06": "Diferenciar fatos de opiniões. Prejuízo: maior suscetibilidade a fake news.",
+      "H07": "Interpretar recursos linguísticos. Prejuízo: dificuldade em perceber ironia ou humor.",
+      "H08": "Analisar efeitos de sentido. Prejuízo: compreensão superficial do texto.",
+      "H09": "Reconhecer gêneros textuais. Prejuízo: não distinguir carta, notícia, artigo.",
+      "H10": "Usar elementos de coesão. Prejuízo: dificuldade em produzir textos claros.",
+      "H11": "Analisar argumentação. Prejuízo: pouca criticidade em debates.",
+      "H12": "Reconhecer variações linguísticas. Prejuízo: preconceitos linguísticos.",
+      "H13": "Interpretar metáforas. Prejuízo: leitura literal demais.",
+      "H14": "Avaliar diferentes pontos de vista. Prejuízo: menor empatia e diálogo.",
+      "H15": "Produzir textos com clareza. Prejuízo: problemas em provas e vida profissional."
+    };
 
-const descritoresMat = {
-  "HM01": {def:"Efetuar cálculos básicos.", prej:"Sem isso, há dificuldades em operações cotidianas."},
-  "HM02": {def:"Resolver multiplicações e divisões.", prej:"Afeta problemas simples do dia a dia."},
-  "HM03": {def:"Compreender o sistema decimal.", prej:"Sem domínio, não entende valores e medidas."},
-  "HM04": {def:"Resolver problemas com inteiros.", prej:"Dificulta interpretar ganhos e perdas."},
-  "HM05": {def:"Trabalhar com frações e decimais.", prej:"Prejudica receitas, medidas e cálculos práticos."},
-  "HM06": {def:"Calcular porcentagens.", prej:"Afeta cálculos de descontos e juros."},
-  "HM07": {def:"Interpretar gráficos e tabelas.", prej:"Limita análise de dados e informações visuais."},
-  "HM08": {def:"Resolver proporções.", prej:"Dificulta regras de três e escalas."},
-  "HM09": {def:"Aplicar medidas.", prej:"Prejudica noções de tempo, massa e comprimento."},
-  "HM10": {def:"Reconhecer figuras planas.", prej:"Sem isso, perde noções de espaço geométrico."},
-  "HM11": {def:"Calcular perímetro e área.", prej:"Dificulta medições de espaços físicos."},
-  "HM12": {def:"Identificar sólidos geométricos.", prej:"Afeta percepção espacial e tridimensional."},
-  "HM13": {def:"Usar simetria e transformações.", prej:"Prejudica compreensão de padrões visuais."},
-  "HM14": {def:"Resolver equações do 1º grau.", prej:"Afeta resolução de problemas algébricos básicos."},
-  "HM15": {def:"Resolver sistemas de equações.", prej:"Compromete resolução de problemas complexos."},
-  "HM16": {def:"Interpretar funções e gráficos.", prej:"Limita noções de crescimento e variação."},
-  "HM17": {def:"Aplicar probabilidade.", prej:"Prejudica tomada de decisões com incerteza."},
-  "HM18": {def:"Usar estatística básica.", prej:"Afeta leitura crítica de dados sociais."},
-  "HM19": {def:"Resolver problemas financeiros simples.", prej:"Compromete cálculos de gastos e orçamento."},
-  "HM20": {def:"Relacionar grandezas em situações práticas.", prej:"Sem isso, não aplica matemática no cotidiano."}
-};
+    const descritoresMat = {
+      "HM01": "Resolver operações básicas. Prejuízo: dificuldade em situações cotidianas.",
+      "HM02": "Compreender o sistema de numeração. Prejuízo: erros frequentes em cálculos.",
+      "HM03": "Operações com números inteiros. Prejuízo: dificuldade em problemas práticos.",
+      "HM04": "Operações com frações. Prejuízo: problemas em receitas e medições.",
+      "HM05": "Resolver problemas com decimais. Prejuízo: dificuldade em dinheiro e medidas.",
+      "HM06": "Operações com porcentagem. Prejuízo: problemas em descontos e juros.",
+      "HM07": "Resolver equações simples. Prejuízo: dificuldade em álgebra.",
+      "HM08": "Compreender expressões algébricas. Prejuízo: travas no raciocínio matemático.",
+      "HM09": "Resolver sistemas lineares. Prejuízo: dificuldade em planejamentos.",
+      "HM10": "Identificar grandezas proporcionais. Prejuízo: erros em escalas e mapas.",
+      "HM11": "Resolver problemas de regra de três. Prejuízo: dificuldade em conversões práticas.",
+      "HM12": "Identificar figuras geométricas. Prejuízo: dificuldade em visualização espacial.",
+      "HM13": "Calcular perímetro e área. Prejuízo: problemas em construções e cotidiano.",
+      "HM14": "Resolver problemas de volume. Prejuízo: erros em recipientes e medidas.",
+      "HM15": "Interpretar gráficos e tabelas. Prejuízo: dificuldade em relatórios e estatísticas.",
+      "HM16": "Calcular médias. Prejuízo: problemas em avaliações e dados.",
+      "HM17": "Analisar probabilidade. Prejuízo: dificuldade em jogos e previsões.",
+      "HM18": "Resolver problemas de estatística. Prejuízo: limitações em tomada de decisão.",
+      "HM19": "Aplicar teorema de Pitágoras. Prejuízo: dificuldade em cálculos de espaço.",
+      "HM20": "Interpretar funções. Prejuízo: dificuldade em modelar situações reais."
+    };
 
-// ----------------- VARIÁVEIS -----------------
-let dadosCSV = {};
-let chart = null;
+    function carregarCSVs() {
+      const arquivos = {
+        "port9": "port9.csv",
+        "mat9": "mat9.csv",
+        "port3": "port3.csv",
+        "mat3": "mat3.csv"
+      };
 
-// ----------------- FUNÇÕES -----------------
-function carregarCSV() {
-  const arquivos = {
-    "port9": "port9.csv",
-    "mat9": "mat9.csv",
-    "port3": "port3.csv",
-    "mat3": "mat3.csv"
-  };
-  for (let key in arquivos) {
-    Papa.parse(arquivos[key], {
-      download: true,
-      header: true,
-      skipEmptyLines: true,
-      complete: results => {
-        results.meta.fields = results.meta.fields.map(h => h.trim());
-        results.data = results.data.map(row => {
-          const novo = {};
-          for (let k in row) if (row.hasOwnProperty(k)) novo[k.trim()] = row[k];
-          return novo;
+      for (let key in arquivos) {
+        Papa.parse(arquivos[key], {
+          download: true,
+          header: true,
+          skipEmptyLines: true,
+          complete: results => {
+            // limpa cabeçalhos
+            results.meta.fields = results.meta.fields.map(h => h.trim());
+            results.data = results.data.map(row => {
+              const novo = {};
+              for (let k in row) novo[k.trim()] = row[k];
+              return novo;
+            });
+            dadosCSV[key] = results.data;
+          }
         });
-        dadosCSV[key] = results.data;
       }
-    });
-  }
-}
+    }
 
-function atualizarAlunos() {
-  const ano = document.getElementById("anoSelect").value;
-  const selAluno = document.getElementById("alunoSelect");
-  selAluno.innerHTML = "";
-  if (!ano) return;
-  const alunos = [...new Set(dadosCSV["port"+ano].map(l => l.Estudante))];
-  alunos.forEach(a => {
-    const opt = document.createElement("option");
-    opt.value = a;
-    opt.textContent = a;
-    selAluno.appendChild(opt);
-  });
-}
+    function carregarAlunos() {
+      const ano = document.getElementById("anoSelect").value;
+      const sel = document.getElementById("alunoSelect");
+      sel.innerHTML = "<option value=''>-- Selecione --</option>";
+      if (!ano) return;
+      const alunos = dadosCSV["port" + ano].map(l => l.Estudante);
+      alunos.forEach(a => sel.innerHTML += `<option value="${a}">${a}</option>`);
+    }
 
-function carregarGrafico() {
-  const ano = document.getElementById("anoSelect").value;
-  const aluno = document.getElementById("alunoSelect").value;
-  if (!ano || !aluno) return;
+    function carregarGrafico() {
+      const ano = document.getElementById("anoSelect").value;
+      const aluno = document.getElementById("alunoSelect").value;
+      if (!ano || !aluno) return;
 
-  const port = dadosCSV["port"+ano].find(l => l.Estudante === aluno);
-  const mat = dadosCSV["mat"+ano].find(l => l.Estudante === aluno);
+      const port = dadosCSV["port" + ano].find(l => l.Estudante === aluno);
+      const mat = dadosCSV["mat" + ano].find(l => l.Estudante === aluno);
 
-  const portLabels = Object.keys(descritoresPort);
-  const matLabels = Object.keys(descritoresMat);
+      // português
+      const portData = Object.keys(descritoresPort).map((h, i) => {
+        const col = `H ${String(i+1).padStart(2,"0")}`;
+        return parseInt(port?.[col] || 0);
+      });
 
-  const portData = portLabels.map((h,i)=>{
-    const col = `H ${String(i+1).padStart(2,"0")}`;
-    return parseInt(port?.[col] || 0);
-  });
+      // matemática
+      const matData = Object.keys(descritoresMat).map((h, i) => {
+        const col = `HM ${String(i+1).padStart(2,"0")}`;
+        return parseInt(mat?.[col] || 0);
+      });
 
-  const matData = matLabels.map((h,i)=>{
-    const col = `HM ${String(i+1).padStart(2,"0")}`;
-    return parseInt(mat?.[col] || 0);
-  });
+      const labels = [...Object.keys(descritoresPort), ...Object.keys(descritoresMat)];
 
-  const labels = [...portLabels, ...matLabels];
-
-  const ctx = document.getElementById("grafico").getContext("2d");
-  if (chart) chart.destroy();
-  chart = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels: labels,
-      datasets: [
-        { label:"Português", data:[...portData, ...Array(matLabels.length).fill(null)], backgroundColor:"rgba(54,162,235,0.7)" },
-        { label:"Matemática", data:[...Array(portLabels.length).fill(null), ...matData], backgroundColor:"rgba(255,99,132,0.7)" }
-      ]
-    },
-    options: {
-      responsive:true,
-      maintainAspectRatio:false,
-      plugins:{
-        tooltip:{
-          callbacks:{
-            label: ctx=>{
-              const key = ctx.label;
-              const descr = descritoresPort[key] || descritoresMat[key];
-              return `${descr?.def || ""} → Acertos: ${ctx.formattedValue}`;
+      const ctx = document.getElementById("grafico").getContext("2d");
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: labels,
+          datasets: [
+            { label: "Português", data: [...portData, ...Array(matData.length).fill(null)], backgroundColor: "rgba(54,162,235,0.85)", barThickness: 28 },
+            { label: "Matemática", data: [...Array(portData.length).fill(null), ...matData], backgroundColor: "rgba(255,99,132,0.85)", barThickness: 28 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: ctx => {
+                  const key = ctx.label;
+                  return (descritoresPort[key] || descritoresMat[key]) + " → Acertos: " + ctx.formattedValue;
+                }
+              }
             }
+          },
+          scales: {
+            y: { beginAtZero: true, ticks: { stepSize: 1, color: "#333", font: { size: 14 } } },
+            x: { ticks: { color: "#333", font: { size: 12 } } }
           }
         }
-      },
-      scales:{ y:{ beginAtZero:true } }
+      });
+
+      // só habilidades abaixo de 50%
+      let html = "";
+      const deficitsPort = Object.keys(descritoresPort).filter((h,i)=> portData[i] < 50);
+      const deficitsMat = Object.keys(descritoresMat).filter((h,i)=> matData[i] < 50);
+
+      if (deficitsPort.length > 0) {
+        html += `<h3>📘 Português – Habilidades com déficit</h3><table>`;
+        deficitsPort.forEach(h=> html += `<tr><td>${h}</td><td>${descritoresPort[h]}</td></tr>`);
+        html += `</table>`;
+      }
+      if (deficitsMat.length > 0) {
+        html += `<h3>🔢 Matemática – Habilidades com déficit</h3><table>`;
+        deficitsMat.forEach(h=> html += `<tr><td>${h}</td><td>${descritoresMat[h]}</td></tr>`);
+        html += `</table>`;
+      }
+
+      document.getElementById("descritores").innerHTML = html;
     }
-  });
 
-  // ------------ LISTA DE DÉFICITS ------------
-  let html = "<h3>⚠️ Habilidades em déficit (≤ 50% de acertos)</h3>";
-  html += "<ul>";
-
-  portLabels.forEach((h,i)=>{
-    const val = portData[i];
-    if (val <= 50) html += `<li><b>${h}</b> – ${descritoresPort[h].def}. <i>Prejuízo:</i> ${descritoresPort[h].prej}</li>`;
-  });
-
-  matLabels.forEach((h,i)=>{
-    const val = matData[i];
-    if (val <= 50) html += `<li><b>${h}</b> – ${descritoresMat[h].def}. <i>Prejuízo:</i> ${descritoresMat[h].prej}</li>`;
-  });
-
-  html += "</ul>";
-  document.getElementById("descritores").innerHTML = html;
-}
-
-// ----------------- EVENTOS -----------------
-document.getElementById("anoSelect").addEventListener("change", atualizarAlunos);
-document.getElementById("alunoSelect").addEventListener("change", carregarGrafico);
-carregarCSV();
-</script>
+    carregarCSVs();
+  </script>
 </body>
 </html>
