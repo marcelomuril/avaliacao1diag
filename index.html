@@ -2,174 +2,170 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Avaliação Diagnóstica 2025</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>CCM Sebastião Paraná - 1ª Avaliação Diagnóstica 2025</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    #grafico-container { height: 400px; }
+  </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
-  <!-- Cabeçalho -->
-  <header class="bg-blue-800 text-white py-6 shadow-lg text-center">
-    <h1 class="text-3xl font-bold">CCM SEBASTIÃO PARANÁ</h1>
-    <h2 class="text-xl mt-2">1ª Avaliação Diagnóstica 2025</h2>
+<body class="bg-gray-100 p-6">
+  <header class="text-center mb-6">
+    <h1 class="text-3xl font-bold">CCM Sebastião Paraná</h1>
+    <h2 class="text-xl">1ª Avaliação Diagnóstica 2025</h2>
   </header>
 
-  <!-- Seleção -->
-  <main class="max-w-5xl mx-auto p-6">
-    <div class="grid md:grid-cols-3 gap-4 mb-6">
-      <select id="anoSelect" class="p-3 rounded-lg border shadow">
-        <option value="">Selecione o Ano Escolar</option>
-        <option value="9">9º Ano - Fundamental</option>
-        <option value="3">3ª Série - Ensino Médio</option>
-      </select>
+  <div class="flex flex-col md:flex-row gap-4 mb-6">
+    <select id="anoSelect" class="p-2 border rounded w-full md:w-1/2" onchange="carregarAlunos()">
+      <option value="">Selecione o ano/série</option>
+      <option value="9">9º Ano - Fundamental</option>
+      <option value="3">3ª Série - Ensino Médio</option>
+    </select>
+    <select id="alunoSelect" class="p-2 border rounded w-full md:w-1/2" onchange="carregarGrafico()">
+      <option value="">Selecione o aluno</option>
+    </select>
+  </div>
 
-      <select id="alunoSelect" class="p-3 rounded-lg border shadow">
-        <option value="">Selecione o Aluno</option>
-      </select>
+  <div id="grafico-container">
+    <canvas id="grafico"></canvas>
+  </div>
 
-      <button onclick="carregarGrafico()" 
-        class="bg-blue-700 hover:bg-blue-900 text-white px-4 py-2 rounded-lg shadow">
-        Mostrar Desempenho
-      </button>
-    </div>
+  <div id="descritores" class="mt-8 bg-white p-4 rounded shadow"></div>
 
-    <!-- Gráfico -->
-    <div class="bg-white p-4 rounded-2xl shadow-lg mb-6">
-      <canvas id="grafico" class="w-full h-96"></canvas>
-    </div>
+<script>
+const arquivos = {
+  "port9": "port9.csv",
+  "mat9": "mat9.csv",
+  "port3": "port3.csv",
+  "mat3": "mat3.csv"
+};
 
-    <!-- Descritores -->
-    <div id="descritores" class="bg-white p-6 rounded-2xl shadow-lg"></div>
-  </main>
+const descritoresPort = {
+  "P01": "Identificar informações explícitas em textos. Aplicação: compreensão imediata. Prejuízo: dificuldade em ler avisos simples.",
+  "P02": "Inferir informações implícitas em textos. Aplicação: interpretação. Prejuízo: má compreensão de mensagens.",
+  "P03": "Distinguir ideia principal e secundária. Aplicação: foco em leituras. Prejuízo: dispersão na compreensão.",
+  "P04": "Reconhecer gêneros textuais. Aplicação: adaptar a linguagem. Prejuízo: uso inadequado da comunicação.",
+  "P05": "Relacionar pronomes e seus referentes. Aplicação: coesão textual. Prejuízo: dificuldade em entender conexões.",
+  "P06": "Identificar efeitos de sentido em palavras. Aplicação: enriquecer vocabulário. Prejuízo: compreensão limitada.",
+  "P07": "Analisar recursos linguísticos. Aplicação: persuasão e estilo. Prejuízo: leitura rasa.",
+  "P08": "Interpretar gráficos e tabelas em textos. Aplicação: leitura de dados. Prejuízo: dificuldade em provas e relatórios.",
+  "P09": "Reconhecer marcas de oralidade em textos escritos. Aplicação: distinguir contextos. Prejuízo: uso inapropriado da linguagem.",
+  "P10": "Entender progressão temática em textos. Aplicação: construir textos claros. Prejuízo: dificuldade em escrever.",
+  "P11": "Identificar argumentos em textos. Aplicação: debates e defesas. Prejuízo: aceitação sem questionar.",
+  "P12": "Estabelecer relações entre partes do texto. Aplicação: lógica textual. Prejuízo: leitura fragmentada.",
+  "P13": "Reconhecer efeitos de ironia ou humor. Aplicação: compreensão crítica. Prejuízo: interpretações erradas.",
+  "P14": "Comparar informações em diferentes textos. Aplicação: análise crítica. Prejuízo: falta de visão ampla.",
+  "P15": "Avaliar a intenção comunicativa do autor. Aplicação: postura crítica. Prejuízo: manipulação por informações."
+};
 
-  <script>
-    let dadosCSV = { port3: [], mat3: [], port9: [], mat9: [] };
-    let chart;
+const descritoresMat = {
+  "M01": "Resolver adições e subtrações. Aplicação: compras e troco. Prejuízo: dependência da calculadora.",
+  "M02": "Resolver multiplicações e divisões. Aplicação: cálculos do dia a dia. Prejuízo: lentidão em tarefas simples.",
+  "M03": "Resolver problemas com operações mistas. Aplicação: planejamento financeiro. Prejuízo: erros em contas.",
+  "M04": "Entender frações. Aplicação: receitas, medidas. Prejuízo: falha em proporções.",
+  "M05": "Trabalhar com decimais. Aplicação: preços, descontos. Prejuízo: erros em cálculos.",
+  "M06": "Entender porcentagens. Aplicação: juros, promoções. Prejuízo: prejuízos financeiros.",
+  "M07": "Resolver expressões numéricas. Aplicação: regras matemáticas. Prejuízo: cálculos incorretos.",
+  "M08": "Interpretar gráficos e tabelas. Aplicação: leitura de dados. Prejuízo: dificuldade em provas.",
+  "M09": "Resolver equações simples. Aplicação: álgebra básica. Prejuízo: dificuldade em conteúdos futuros.",
+  "M10": "Resolver problemas com equações. Aplicação: modelagem matemática. Prejuízo: não compreender lógica.",
+  "M11": "Compreender proporcionalidade. Aplicação: mapas, escalas. Prejuízo: erros em medidas.",
+  "M12": "Resolver regra de três. Aplicação: cálculos práticos. Prejuízo: limitações em problemas diários.",
+  "M13": "Entender médias. Aplicação: estatísticas escolares. Prejuízo: interpretação errada de resultados.",
+  "M14": "Compreender geometria plana. Aplicação: construções, artes. Prejuízo: falhas em desenho técnico.",
+  "M15": "Compreender geometria espacial. Aplicação: embalagens, arquitetura. Prejuízo: dificuldade em visualizar objetos.",
+  "M16": "Entender medidas de tempo e massa. Aplicação: cotidiano. Prejuízo: erros em planejamento.",
+  "M17": "Resolver problemas com áreas. Aplicação: construção civil. Prejuízo: cálculo errado de materiais.",
+  "M18": "Resolver problemas com volume. Aplicação: recipientes, líquidos. Prejuízo: uso incorreto de recursos."
+};
 
-    // descritores genéricos para pais
-    const descritoresPort = {
-      P01: "Identificar informações diretas em um texto. Aplicação: leitura de avisos, instruções simples. Prejuízo: dificuldade em compreender mensagens básicas.",
-      P02: "Reconhecer a ideia principal. Aplicação: estudos e provas. Prejuízo: perde a noção do que o texto quer dizer.",
-      P03: "Interpretar o sentido de palavras em contexto. Aplicação: leitura de notícias e histórias. Prejuízo: interpretações equivocadas.",
-      P04: "Inferir informações implícitas. Aplicação: compreender textos além do óbvio. Prejuízo: leitura superficial.",
-      P05: "Reconhecer diferentes gêneros textuais. Aplicação: adaptar a leitura ao tipo de texto. Prejuízo: confusão entre textos informativos e opinativos.",
-      P06: "Compreender o uso de pronomes e coesão. Aplicação: seguir o raciocínio textual. Prejuízo: leitura fragmentada.",
-      P07: "Identificar a finalidade de um texto. Aplicação: diferenciar entre informar, convencer, entreter. Prejuízo: má interpretação da intenção.",
-      P08: "Reconhecer figuras de linguagem. Aplicação: literatura e expressões comuns. Prejuízo: dificuldade em interpretar sentidos figurados.",
-      P09: "Relacionar texto e imagem. Aplicação: infográficos, propagandas. Prejuízo: leitura incompleta de informações.",
-      P10: "Compreender relações lógicas no texto. Aplicação: conectar ideias. Prejuízo: dificuldade em seguir argumentos.",
-      P11: "Distinguir fato de opinião. Aplicação: leitura crítica. Prejuízo: pode acreditar em fake news.",
-      P12: "Identificar recursos argumentativos. Aplicação: debates e redações. Prejuízo: baixa capacidade de argumentar.",
-      P13: "Compreender organização de parágrafos. Aplicação: produção de textos. Prejuízo: redações confusas.",
-      P14: "Reconhecer variações linguísticas. Aplicação: respeitar contextos culturais. Prejuízo: preconceito linguístico.",
-      P15: "Relacionar textos diferentes. Aplicação: comparar fontes. Prejuízo: visão limitada de um tema."
-    };
+let dadosCSV = {};
+let chart;
 
-    const descritoresMat = {
-      M01: "Efetuar operações de adição e subtração. Aplicação: compras e cálculos simples. Prejuízo: dependência da calculadora.",
-      M02: "Efetuar multiplicação e divisão. Aplicação: partilhas, problemas práticos. Prejuízo: erros em situações cotidianas.",
-      M03: "Resolver problemas com frações. Aplicação: receitas, medidas. Prejuízo: dificuldade em dividir ou entender proporções.",
-      M04: "Utilizar números decimais. Aplicação: dinheiro, notas. Prejuízo: erros em cálculos financeiros.",
-      M05: "Interpretar porcentagens. Aplicação: descontos, juros. Prejuízo: não compreender promoções ou taxas.",
-      M06: "Calcular média aritmética. Aplicação: notas escolares, estatísticas. Prejuízo: não saber avaliar desempenhos.",
-      M07: "Resolver equações simples. Aplicação: problemas de lógica. Prejuízo: dificuldade em álgebra básica.",
-      M08: "Identificar propriedades geométricas. Aplicação: desenho, construções. Prejuízo: erros em medidas e formas.",
-      M09: "Calcular área de figuras planas. Aplicação: pintura, piso. Prejuízo: não saber planejar espaço.",
-      M10: "Calcular volume de sólidos. Aplicação: caixas, recipientes. Prejuízo: problemas em armazenamento.",
-      M11: "Interpretar gráficos e tabelas. Aplicação: notícias, dados. Prejuízo: não compreender informações visuais.",
-      M12: "Resolver problemas de proporção. Aplicação: mapas, escalas. Prejuízo: cálculos incorretos.",
-      M13: "Trabalhar com grandezas e medidas. Aplicação: receitas, construções. Prejuízo: uso inadequado de medidas.",
-      M14: "Identificar simetria. Aplicação: artes, design. Prejuízo: dificuldade em visualização espacial.",
-      M15: "Resolver problemas com ângulos. Aplicação: construções, desenhos técnicos. Prejuízo: erros em cálculos geométricos.",
-      M16: "Compreender probabilidade. Aplicação: jogos, previsões. Prejuízo: interpretações erradas de riscos.",
-      M17: "Resolver sistemas de equações. Aplicação: cálculos avançados. Prejuízo: dificuldades em matemática superior.",
-      M18: "Trabalhar com funções. Aplicação: ciências, economia. Prejuízo: limitações em análises gráficas."
-    };
+function carregarCSVs() {
+  Object.entries(arquivos).forEach(([key, file]) => {
+    Papa.parse(file, {
+      download: true,
+      header: true,
+      complete: results => { dadosCSV[key] = results.data; }
+    });
+  });
+}
 
-    // carregar CSVs
-    const arquivos = {
-      "9": { port: "port9.csv", mat: "mat9.csv" },
-      "3": { port: "port3.csv", mat: "mat3.csv" }
-    };
+function carregarAlunos() {
+  const ano = document.getElementById("anoSelect").value;
+  const alunoSelect = document.getElementById("alunoSelect");
+  alunoSelect.innerHTML = '<option value="">Selecione o aluno</option>';
+  if (!ano) return;
 
-    document.getElementById("anoSelect").addEventListener("change", e => {
-      const ano = e.target.value;
-      const alunoSelect = document.getElementById("alunoSelect");
-      alunoSelect.innerHTML = "<option value=''>Selecione o Aluno</option>";
+  const lista = [...new Set(dadosCSV["port"+ano].map(l => l.Estudante))];
+  lista.forEach(aluno => {
+    if (aluno) {
+      const opt = document.createElement("option");
+      opt.value = aluno; opt.textContent = aluno;
+      alunoSelect.appendChild(opt);
+    }
+  });
+}
 
-      if (!ano) return;
+function carregarGrafico() {
+  const ano = document.getElementById("anoSelect").value;
+  const aluno = document.getElementById("alunoSelect").value;
+  if (!ano || !aluno) return;
 
-      ["port", "mat"].forEach(disc => {
-        Papa.parse(arquivos[ano][disc], {
-          download: true,
-          header: true,
-          complete: res => {
-            dadosCSV[disc + ano] = res.data;
-            if (disc === "port") {
-              res.data.forEach(linha => {
-                if (linha.Estudante && ![...alunoSelect.options].some(o => o.value === linha.Estudante)) {
-                  alunoSelect.innerHTML += `<option value="${linha.Estudante}">${linha.Estudante}</option>`;
-                }
-              });
+  const port = dadosCSV["port"+ano].find(l => l.Estudante === aluno);
+  const mat = dadosCSV["mat"+ano].find(l => l.Estudante === aluno);
+
+  const portData = Object.keys(descritoresPort).map((h, i) => {
+    const col = `H ${String(i+1).padStart(2,"0")}`;
+    return parseInt(port?.[col] || 0);
+  });
+
+  const matData = Object.keys(descritoresMat).map((h, i) => {
+    const col = `H ${String(i+1).padStart(2,"0")}`;
+    return parseInt(mat?.[col] || 0);
+  });
+
+  const labels = [...Object.keys(descritoresPort), ...Object.keys(descritoresMat)];
+
+  const ctx = document.getElementById("grafico").getContext("2d");
+  if (chart) chart.destroy();
+  chart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [
+        { label: "Português", data: [...portData, ...Array(18).fill(null)], backgroundColor: "rgba(54,162,235,0.7)" },
+        { label: "Matemática", data: [...Array(15).fill(null), ...matData], backgroundColor: "rgba(255,99,132,0.7)" }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const key = ctx.label;
+              return (descritoresPort[key] || descritoresMat[key]) + " → Acertos: " + ctx.formattedValue;
             }
           }
-        });
-      });
-    });
-
-    function carregarGrafico() {
-      const ano = document.getElementById("anoSelect").value;
-      const aluno = document.getElementById("alunoSelect").value;
-      if (!ano || !aluno) return;
-
-      const port = dadosCSV["port" + ano].find(l => l.Estudante === aluno);
-      const mat = dadosCSV["mat" + ano].find(l => l.Estudante === aluno);
-
-      const labels = [
-        ...Object.keys(descritoresPort),
-        ...Object.keys(descritoresMat)
-      ];
-
-      const portData = Object.keys(descritoresPort).map(h => parseInt(port?.[h.replace("P", "H")] || 0));
-      const matData = Object.keys(descritoresMat).map(h => parseInt(mat?.[h.replace("M", "H")] || 0));
-
-      const ctx = document.getElementById("grafico").getContext("2d");
-      if (chart) chart.destroy();
-      chart = new Chart(ctx, {
-        type: "bar",
-        data: {
-          labels: labels,
-          datasets: [
-            { label: "Português", data: [...portData, ...Array(18).fill(null)], backgroundColor: "rgba(54,162,235,0.7)" },
-            { label: "Matemática", data: [...Array(15).fill(null), ...matData], backgroundColor: "rgba(255,99,132,0.7)" }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            tooltip: {
-              callbacks: {
-                label: ctx => {
-                  const key = ctx.label;
-                  return (descritoresPort[key] || descritoresMat[key]) + " → Acertos: " + ctx.formattedValue;
-                }
-              }
-            }
-          },
-          scales: { y: { beginAtZero: true } }
         }
-      });
-
-      // descritores abaixo
-      let html = `<h3 class="text-xl font-bold mb-3">📘 Português</h3><ul class="list-disc pl-5 mb-6">`;
-      for (let [k,v] of Object.entries(descritoresPort)) html += `<li><b>${k}</b> – ${v}</li>`;
-      html += `</ul><h3 class="text-xl font-bold mb-3">🔢 Matemática</h3><ul class="list-disc pl-5">`;
-      for (let [k,v] of Object.entries(descritoresMat)) html += `<li><b>${k}</b> – ${v}</li>`;
-      html += `</ul>`;
-      document.getElementById("descritores").innerHTML = html;
+      },
+      scales: { y: { beginAtZero: true } }
     }
-  </script>
+  });
+
+  let html = `<h3 class="text-xl font-bold mb-3">📘 Português</h3><ul class="list-disc pl-5 mb-6">`;
+  for (let [k,v] of Object.entries(descritoresPort)) html += `<li><b>${k}</b> – ${v}</li>`;
+  html += `</ul><h3 class="text-xl font-bold mb-3">🔢 Matemática</h3><ul class="list-disc pl-5">`;
+  for (let [k,v] of Object.entries(descritoresMat)) html += `<li><b>${k}</b> – ${v}</li>`;
+  html += `</ul>`;
+  document.getElementById("descritores").innerHTML = html;
+}
+
+carregarCSVs();
+</script>
 </body>
 </html>
