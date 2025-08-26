@@ -8,7 +8,7 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      background-color: #f8f9fa;
+      background-color: #f4f6f9;
       margin: 0;
       padding: 0;
       color: #333;
@@ -18,31 +18,38 @@
       color: white;
       padding: 20px;
       text-align: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
     h1 {
       margin: 0;
-      font-size: 28px;
+      font-size: 26px;
     }
     h2 {
       margin: 5px 0 0;
-      font-size: 20px;
+      font-size: 18px;
       font-weight: normal;
+      opacity: 0.9;
     }
     main {
       padding: 20px;
-      max-width: 1200px;
+      max-width: 1100px;
       margin: auto;
     }
-    select, button {
-      padding: 10px;
+    select {
+      padding: 8px;
       margin: 10px 0;
       font-size: 16px;
     }
-    canvas {
-      background: #fff;
-      border: 1px solid #ccc;
-      padding: 10px;
+    .card {
+      background: white;
+      padding: 20px;
       margin-top: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    canvas {
+      width: 100% !important;
+      max-height: 400px !important;
     }
     .descritores {
       margin-top: 30px;
@@ -52,10 +59,14 @@
       border-bottom: 1px solid #ddd;
     }
     .descritor:nth-child(odd) {
-      background: #f1f1f1;
+      background: #f9f9f9;
     }
     .descritor:nth-child(even) {
       background: #ffffff;
+    }
+    h3 {
+      margin-top: 0;
+      color: #2c3e50;
     }
   </style>
 </head>
@@ -78,7 +89,9 @@
       <option value="">-- escolha a turma antes --</option>
     </select>
 
-    <canvas id="grafico" width="1000" height="500"></canvas>
+    <div class="card">
+      <canvas id="grafico"></canvas>
+    </div>
 
     <div id="descritores" class="descritores"></div>
   </main>
@@ -143,7 +156,7 @@
         download: true,
         header: true,
         skipEmptyLines: true,
-        delimiter: ";", // CORREÇÃO AQUI ✅
+        delimiter: ";",
         complete: res => {
           dadosCSV.port = res.data;
           if (dadosCSV.mat.length) callback();
@@ -154,7 +167,7 @@
         download: true,
         header: true,
         skipEmptyLines: true,
-        delimiter: ";", // CORREÇÃO AQUI ✅
+        delimiter: ";",
         complete: res => {
           dadosCSV.mat = res.data;
           if (dadosCSV.port.length) callback();
@@ -215,10 +228,7 @@
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: {
-              display: true,
-              position: "top"
-            },
+            legend: { display: true, position: "top" },
             tooltip: {
               callbacks: {
                 label: ctx => {
@@ -230,22 +240,15 @@
             }
           },
           scales: {
-            y: {
-              beginAtZero: true,
-              max: 20
-            },
+            y: { beginAtZero: true, max: 20 },
             x: {
-              ticks: {
-                autoSkip: false,
-                maxRotation: 90,
-                minRotation: 90
-              }
+              ticks: { autoSkip: false, maxRotation: 60, minRotation: 60 }
             }
           }
         }
       });
 
-      // Mostrar descritores abaixo do gráfico
+      // descritores
       const descritoresDiv = document.getElementById("descritores");
       descritoresDiv.innerHTML = "<h3>Descritores das Habilidades</h3>";
       Object.entries(descritoresPort).forEach(([h, d]) => {
