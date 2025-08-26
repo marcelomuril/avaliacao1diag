@@ -33,7 +33,11 @@
 
   <!-- Gráfico -->
   <div class="bg-white p-6 rounded-2xl shadow">
-    <canvas id="grafico" height="120"></canvas>
+    <!-- ⭐ Altura fixa para o contêiner do gráfico evita loop de resize -->
+    <div id="chartBox" class="h-[420px]"> 
+      <!-- ⭐ canvas SEM atributo height; usamos width/height via CSS para preencher o contêiner -->
+      <canvas id="grafico" class="w-full h-full"></canvas>
+    </div>
   </div>
 
   <!-- Descritores -->
@@ -63,6 +67,7 @@
     const selectAluno = document.getElementById("selectAluno");
     const nivelBox = document.getElementById("nivelBox");
     const descritoresBox = document.getElementById("descritoresBox");
+    const chartBox = document.getElementById("chartBox");
     let chart;
 
     async function carregarCSV(path) {
@@ -75,18 +80,27 @@
       });
     }
 
+    // Limpa gráfico com segurança
+    function resetChart() {
+      if (chart) { chart.destroy(); chart = null; }
+      // ⭐ Recria o canvas para garantir estado limpo
+      chartBox.innerHTML = '<canvas id="grafico" class="w-full h-full"></canvas>';
+    }
+
     // 📌 Carregar lista de alunos
     selectAno.addEventListener("change", async () => {
       selectAluno.innerHTML = "<option value=''>Selecione o Aluno</option>";
       nivelBox.innerHTML = "";
       descritoresBox.innerHTML = "";
+      resetChart(); // ⭐ garante que o gráfico não fique “reagindo” ao resize do antigo
+
       if (!selectAno.value) return;
 
       const [port] = selectAno.value === "9"
         ? [await carregarCSV("port9.csv")]
         : [await carregarCSV("port3.csv")];
 
-      const nomes = [...new Set(port.map(r => r.Estudante))];
+      const nomes = [...new Set(port.map(r => r.Estudante))].filter(Boolean).sort();
       nomes.forEach(n => {
         const opt = document.createElement("option");
         opt.value = n;
@@ -97,7 +111,7 @@
 
     // 📌 Carregar dados do aluno
     selectAluno.addEventListener("change", async () => {
-      if (!selectAluno.value) return;
+      if (!selectAluno.value) { resetChart(); return; }
 
       const [port, mat] = selectAno.value === "9"
         ? [await carregarCSV("port9.csv"), await carregarCSV("mat9.csv")]
@@ -106,20 +120,24 @@
       const dadosPort = port.find(r => r.Estudante === selectAluno.value);
       const dadosMat = mat.find(r => r.Estudante === selectAluno.value);
 
-      const habilidades = Object.keys(dadosPort).filter(k => k.startsWith("H"));
-      const valoresPort = habilidades.map(h => parseInt(dadosPort[h] || 0));
-      const valoresMat = habilidades.map(h => parseInt(dadosMat[h] || 0));
+      if (!dadosPort || !dadosMat) { resetChart(); return; }
+
+      const habilidades = Object.keys(dadosPort).filter(k => /^H\\s*\\d+/i.test(k) || k.startsWith("H"));
+      // Normaliza rótulos tipo "H 01" -> "H01"
+      const normalizadas = habilidades.map(h => "H" + h.replace(/\\D/g, "").padStart(2, "0"));
+
+      const valoresPort = habilidades.map((h, i) => parseInt(dadosPort[h] || dadosPort[normalizadas[i]] || 0));
+      const valoresMat = habilidades.map((h, i) => parseInt(dadosMat[h] || dadosMat[normalizadas[i]] || 0));
 
       // Nível de aprendizagem
-      nivelBox.textContent = "Nível de Aprendizagem: " + dadosPort["Níveis de Aprendizagem"];
+      nivelBox.textContent = "Nível de Aprendizagem: " + (dadosPort["Níveis de Aprendizagem"] || "");
 
-      // Gráfico
-      if (chart) chart.destroy();
+      resetChart(); // ⭐ cria um canvas novinho
       const ctx = document.getElementById("grafico").getContext("2d");
       chart = new Chart(ctx, {
         type: "bar",
         data: {
-          labels: habilidades,
+          labels: normalizadas,
           datasets: [
             { label: "Português", data: valoresPort, backgroundColor: "rgba(59,130,246,0.9)" },
             { label: "Matemática", data: valoresMat, backgroundColor: "rgba(239,68,68,0.9)" }
@@ -127,24 +145,27 @@
         },
         options: {
           responsive: true,
+          maintainAspectRatio: false, // ⭐ usa a altura fixa do contêiner
+          resizeDelay: 150,           // ⭐ evita “loop” de resize em alguns navegadores
           plugins: {
-            legend: { labels: { font: { size: 16 } } }
+            legend: { labels: { font: { size: 16 } } },
+            tooltip: { enabled: true }
           },
           scales: {
             x: { ticks: { font: { size: 14 } } },
-            y: { ticks: { font: { size: 14 }, beginAtZero: true } }
+            y: { beginAtZero: true, ticks: { font: { size: 14 } } }
           }
         }
       });
 
       // Descritores
       descritoresBox.innerHTML = "<h3 class='text-lg font-semibold mb-4'>Descritores</h3>";
-      habilidades.forEach(h => {
+      normalizadas.forEach(h => {
         const d = descritores[h];
         descritoresBox.innerHTML += `
           <div class='border-b pb-2 mb-2'>
-            <p class='font-bold'>${h} - ${d.descricao}</p>
-            <p class='text-sm text-gray-600'>${d.prejuizo}</p>
+            <p class='font-bold'>${h} - ${d?.descricao || ""}</p>
+            <p class='text-sm text-gray-600'>${d?.prejuizo || ""}</p>
           </div>`;
       });
     });
