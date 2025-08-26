@@ -2,207 +2,259 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Avaliação Diagnóstica 2025</title>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <title>CCM Sebastião Paraná - Avaliação Diagnóstica 2025</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; background: #f8f9fa; color: #333; }
-    header { background: #2c3e50; color: white; padding: 20px; text-align: center; }
-    header h1 { margin: 0; font-size: 1.8rem; }
-    header h2 { margin: 5px 0 0; font-weight: normal; font-size: 1.2rem; color: #ddd; }
-    main { padding: 20px; max-width: 1200px; margin: auto; }
-    select { padding: 6px; margin: 8px; font-size: 1rem; }
-    #chart-container { height: 500px; margin: 30px 0; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-    h3 { margin-top: 30px; }
-    .habilidade { padding: 12px; border-bottom: 1px solid #ccc; }
-    .habilidade:nth-child(odd) { background: #f1f1f1; }
-    .habilidade:nth-child(even) { background: #e9ecef; }
-    .habilidade b { color: #2c3e50; }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f8f9fa;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+    header {
+      background-color: #2c3e50;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+    h2 {
+      margin: 5px 0 0;
+      font-size: 20px;
+      font-weight: normal;
+    }
+    main {
+      padding: 20px;
+      max-width: 1200px;
+      margin: auto;
+    }
+    select, button {
+      padding: 10px;
+      margin: 10px 0;
+      font-size: 16px;
+    }
+    canvas {
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-top: 20px;
+    }
+    .descritores {
+      margin-top: 30px;
+    }
+    .descritor {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+    }
+    .descritor:nth-child(odd) {
+      background: #f1f1f1;
+    }
+    .descritor:nth-child(even) {
+      background: #ffffff;
+    }
   </style>
 </head>
 <body>
   <header>
     <h1>CCM Sebastião Paraná</h1>
-    <h2>1ª Avaliação Diagnóstica 2025</h2>
+    <h2>1ª Avaliação Diagnóstica - 2025</h2>
   </header>
   <main>
-    <label for="serie">Selecione o Ano/Série:</label>
-    <select id="serie">
-      <option value="">-- Escolha --</option>
-      <option value="9ano">9º Ano Fundamental</option>
-      <option value="3serie">3ª Série Ensino Médio</option>
+    <label>Selecione a turma:</label>
+    <select id="turmaSelect">
+      <option value="">-- escolha --</option>
+      <option value="9ano">9º Ano</option>
+      <option value="3serie">3ª Série</option>
     </select>
 
-    <label for="aluno">Selecione o Aluno:</label>
-    <select id="aluno"></select>
+    <br>
+    <label>Selecione o aluno:</label>
+    <select id="alunoSelect" disabled>
+      <option value="">-- escolha a turma antes --</option>
+    </select>
 
-    <div id="chart-container">
-      <canvas id="grafico"></canvas>
-    </div>
+    <canvas id="grafico" width="1000" height="500"></canvas>
 
-    <div id="descricoes"></div>
+    <div id="descritores" class="descritores"></div>
   </main>
 
-<script>
-// Arquivos CSV
-const arquivos = {
-  "9ano": ["port9.csv", "mat9.csv"],
-  "3serie": ["port3.csv", "mat3.csv"]
-};
+  <script>
+    const arquivos = {
+      "9ano": { port: "port9.csv", mat: "mat9.csv" },
+      "3serie": { port: "port3.csv", mat: "mat3.csv" }
+    };
 
-let dadosCSV = {};
-let chart = null;
+    const dadosCSV = { port: [], mat: [] };
+    let turmaSelecionada = "";
+    let chart = null;
 
-// Habilidades e descrições
-const descritoresPort = {
-  "P01": {def: "Identificar informações diretas em textos simples.", prej: "Dificuldade em localizar dados básicos em textos."},
-  "P02": {def: "Compreender a ideia principal de um parágrafo.", prej: "Não entender o sentido global do texto."},
-  "P03": {def: "Interpretar o sentido de palavras em contexto.", prej: "Não captar nuances de vocabulário."},
-  "P04": {def: "Reconhecer a finalidade de textos de uso social.", prej: "Não utilizar corretamente textos do dia a dia."},
-  "P05": {def: "Localizar informações implícitas no texto.", prej: "Não perceber mensagens indiretas."},
-  "P06": {def: "Interpretar gráficos e imagens em textos.", prej: "Não relacionar imagem e conteúdo escrito."},
-  "P07": {def: "Estabelecer relação entre partes do texto.", prej: "Leitura fragmentada e sem conexão."},
-  "P08": {def: "Inferir a intenção do autor.", prej: "Não compreender o objetivo do texto."},
-  "P09": {def: "Reconhecer recursos de linguagem figurada.", prej: "Interpretação literal e limitada."},
-  "P10": {def: "Comparar informações em diferentes textos.", prej: "Não integrar dados de diversas fontes."},
-  "P11": {def: "Identificar o gênero textual.", prej: "Não reconhecer a função social do texto."},
-  "P12": {def: "Reconhecer argumentos em textos de opinião.", prej: "Não distinguir opinião de informação."},
-  "P13": {def: "Identificar marcas linguísticas da narrativa.", prej: "Não perceber tempo, espaço e personagens."},
-  "P14": {def: "Reconhecer tempos verbais em textos.", prej: "Não compreender a progressão temporal."},
-  "P15": {def: "Interpretar textos poéticos.", prej: "Dificuldade em compreender recursos literários."}
-};
+    // descritores genéricos
+    const descritoresPort = {
+      "H 01": "Localizar informações explícitas em um texto.",
+      "H 02": "Inferir o sentido de uma palavra ou expressão em contexto.",
+      "H 03": "Reconhecer a finalidade de um texto.",
+      "H 04": "Identificar tema de um texto.",
+      "H 05": "Distinguir fato de opinião.",
+      "H 06": "Estabelecer relações de causa e consequência.",
+      "H 07": "Identificar efeitos de ironia ou humor.",
+      "H 08": "Reconhecer recursos linguísticos em textos argumentativos.",
+      "H 09": "Inferir informações implícitas.",
+      "H 10": "Relacionar partes de um texto.",
+      "H 11": "Identificar variedade linguística usada.",
+      "H 12": "Reconhecer marcas de coesão.",
+      "H 13": "Reconhecer elementos de narrativa.",
+      "H 14": "Analisar o ponto de vista em um texto.",
+      "H 15": "Comparar textos sobre o mesmo tema."
+    };
 
-const descritoresMat = {
-  "M01": {def: "Efetuar adições e subtrações em situações do dia a dia.", prej: "Erro em operações simples cotidianas."},
-  "M02": {def: "Efetuar multiplicações e divisões simples.", prej: "Erro em cálculos básicos."},
-  "M03": {def: "Resolver problemas com números inteiros.", prej: "Não interpretar valores positivos e negativos."},
-  "M04": {def: "Compreender o conceito de fração.", prej: "Dificuldade em dividir quantidades."},
-  "M05": {def: "Resolver operações com frações.", prej: "Erro em cálculos de repartição."},
-  "M06": {def: "Resolver problemas com números decimais.", prej: "Erro em cálculos com dinheiro, medidas."},
-  "M07": {def: "Reconhecer porcentagem em contextos práticos.", prej: "Não calcular descontos ou aumentos."},
-  "M08": {def: "Resolver problemas com regra de três simples.", prej: "Erro em proporções do dia a dia."},
-  "M09": {def: "Interpretar informações em gráficos e tabelas.", prej: "Não compreender dados apresentados."},
-  "M10": {def: "Resolver problemas de medida de tempo.", prej: "Confusão com horas, dias, meses."},
-  "M11": {def: "Calcular perímetro de figuras planas.", prej: "Erro em medir bordas de figuras."},
-  "M12": {def: "Calcular área de figuras simples.", prej: "Erro em calcular espaço ocupado."},
-  "M13": {def: "Identificar propriedades de figuras geométricas.", prej: "Não reconhecer formas e ângulos."},
-  "M14": {def: "Resolver problemas com ângulos.", prej: "Não compreender medidas angulares."},
-  "M15": {def: "Identificar sequências numéricas.", prej: "Erro em identificar padrões."},
-  "M16": {def: "Compreender noções de probabilidade simples.", prej: "Não avaliar chances em situações práticas."},
-  "M17": {def: "Resolver equações do 1º grau.", prej: "Erro em problemas simples de álgebra."},
-  "M18": {def: "Resolver equações do 2º grau.", prej: "Não resolver situações mais complexas de álgebra."},
-  "M19": {def: "Interpretar funções em gráficos.", prej: "Não compreender crescimento e decrescimento."},
-  "M20": {def: "Resolver problemas de geometria espacial.", prej: "Não calcular volume e área de sólidos."}
-};
+    const descritoresMat = {
+      "HM 01": "Resolver problemas envolvendo as quatro operações.",
+      "HM 02": "Calcular com números racionais em diferentes representações.",
+      "HM 03": "Resolver problemas de proporcionalidade.",
+      "HM 04": "Trabalhar com porcentagem e juros simples.",
+      "HM 05": "Resolver problemas de equações do 1º grau.",
+      "HM 06": "Interpretar informações em tabelas e gráficos.",
+      "HM 07": "Resolver problemas de geometria plana.",
+      "HM 08": "Resolver problemas de geometria espacial.",
+      "HM 09": "Calcular perímetro e área de figuras planas.",
+      "HM 10": "Calcular volume de sólidos geométricos.",
+      "HM 11": "Resolver problemas com expressões algébricas.",
+      "HM 12": "Analisar gráficos de funções.",
+      "HM 13": "Resolver problemas de função do 1º grau.",
+      "HM 14": "Resolver problemas de função quadrática.",
+      "HM 15": "Analisar progressões aritméticas e geométricas.",
+      "HM 16": "Resolver problemas de probabilidade.",
+      "HM 17": "Resolver problemas de estatística descritiva.",
+      "HM 18": "Resolver problemas de combinatória.",
+      "HM 19": "Interpretar situações envolvendo grandezas físicas.",
+      "HM 20": "Aplicar raciocínio lógico na resolução de problemas."
+    };
 
-// carregar CSVs
-function carregarCSV(chave, arquivosSerie) {
-  dadosCSV[chave] = [];
-  arquivosSerie.forEach(arq => {
-    Papa.parse(arq, {
-      download: true,
-      header: true,
-      skipEmptyLines: true,
-      complete: res => {
-        res.data.forEach(linha => {
-          dadosCSV[chave].push(linha);
-        });
-      }
-    });
-  });
-}
+    function carregarCSVs(turma, callback) {
+      dadosCSV.port = [];
+      dadosCSV.mat = [];
 
-// popular alunos
-document.getElementById("serie").addEventListener("change", function() {
-  let serie = this.value;
-  let alunoSel = document.getElementById("aluno");
-  alunoSel.innerHTML = "";
-  if (!serie) return;
-
-  carregarCSV(serie, arquivos[serie]);
-
-  setTimeout(() => {
-    let alunos = [...new Set(dadosCSV[serie].map(d => d["Estudante"]))];
-    alunos.forEach(al => {
-      let opt = document.createElement("option");
-      opt.value = al;
-      opt.textContent = al;
-      alunoSel.appendChild(opt);
-    });
-  }, 500);
-});
-
-// desenhar gráfico
-document.getElementById("aluno").addEventListener("change", function() {
-  let serie = document.getElementById("serie").value;
-  let aluno = this.value;
-  if (!aluno) return;
-
-  let dadosAluno = dadosCSV[serie].filter(d => d["Estudante"] === aluno);
-  let port = dadosAluno.find(d => d["Componente Curricular"]?.toLowerCase().includes("port"));
-  let mat = dadosAluno.find(d => d["Componente Curricular"]?.toLowerCase().includes("mat"));
-
-  let portData = port ? Object.keys(descritoresPort).map((k,i) => Number(port[`H ${String(i+1).padStart(2,"0")}`] || 0)) : [];
-  let matData = mat ? Object.keys(descritoresMat).map((k,i) => Number(mat[`HM ${String(i+1).padStart(2,"0")}`] || 0)) : [];
-
-  if (chart) chart.destroy();
-  const ctx = document.getElementById("grafico").getContext("2d");
-
-  chart = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels: [...Object.keys(descritoresPort), ...Object.keys(descritoresMat)],
-      datasets: [
-        {
-          label: "Português",
-          data: [...portData, ...Array(matData.length).fill(null)],
-          backgroundColor: "rgba(54,162,235,0.85)",
-          barThickness: 30,
-          borderRadius: 5
-        },
-        {
-          label: "Matemática",
-          data: [...Array(portData.length).fill(null), ...matData],
-          backgroundColor: "rgba(255,99,132,0.85)",
-          barThickness: 30,
-          borderRadius: 5
+      Papa.parse(arquivos[turma].port, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        delimiter: ";", // CORREÇÃO AQUI ✅
+        complete: res => {
+          dadosCSV.port = res.data;
+          if (dadosCSV.mat.length) callback();
         }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: "top" },
-        tooltip: {
-          callbacks: {
-            label: ctx => {
-              const key = ctx.label;
-              const desc = descritoresPort[key]?.def || descritoresMat[key]?.def;
-              return `${key}: ${ctx.formattedValue}% – ${desc}`;
+      });
+
+      Papa.parse(arquivos[turma].mat, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        delimiter: ";", // CORREÇÃO AQUI ✅
+        complete: res => {
+          dadosCSV.mat = res.data;
+          if (dadosCSV.port.length) callback();
+        }
+      });
+    }
+
+    document.getElementById("turmaSelect").addEventListener("change", function() {
+      turmaSelecionada = this.value;
+      const alunoSelect = document.getElementById("alunoSelect");
+      alunoSelect.innerHTML = "<option value=''>-- carregando --</option>";
+      alunoSelect.disabled = true;
+
+      if (!turmaSelecionada) return;
+
+      carregarCSVs(turmaSelecionada, () => {
+        const alunos = [...new Set(dadosCSV.port.map(l => l["Estudante"]))];
+        alunoSelect.innerHTML = "<option value=''>-- escolha --</option>";
+        alunos.forEach(a => {
+          alunoSelect.innerHTML += `<option value="${a}">${a}</option>`;
+        });
+        alunoSelect.disabled = false;
+      });
+    });
+
+    document.getElementById("alunoSelect").addEventListener("change", function() {
+      const aluno = this.value;
+      if (!aluno) return;
+
+      const dadosPort = dadosCSV.port.find(l => l["Estudante"] === aluno) || {};
+      const dadosMat = dadosCSV.mat.find(l => l["Estudante"] === aluno) || {};
+
+      const labels = [...Object.keys(descritoresPort), ...Object.keys(descritoresMat)];
+      const portData = Object.keys(descritoresPort).map(h => parseInt(dadosPort[h] || 0));
+      const matData = Object.keys(descritoresMat).map(h => parseInt(dadosMat[h] || 0));
+
+      if (chart) chart.destroy();
+      const ctx = document.getElementById("grafico").getContext("2d");
+
+      chart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: "Português",
+              data: [...portData, ...Array(matData.length).fill(null)],
+              backgroundColor: "rgba(54,162,235,0.8)"
+            },
+            {
+              label: "Matemática",
+              data: [...Array(portData.length).fill(null), ...matData],
+              backgroundColor: "rgba(255,99,132,0.8)"
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: true,
+              position: "top"
+            },
+            tooltip: {
+              callbacks: {
+                label: ctx => {
+                  const key = ctx.label;
+                  const desc = descritoresPort[key] || descritoresMat[key] || "";
+                  return `${key}: ${ctx.formattedValue} acertos – ${desc}`;
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 20
+            },
+            x: {
+              ticks: {
+                autoSkip: false,
+                maxRotation: 90,
+                minRotation: 90
+              }
             }
           }
         }
-      },
-      scales: {
-        y: { beginAtZero: true, max: 100 }
-      }
-    }
-  });
+      });
 
-  // descrições sempre exibidas
-  const descricoes = document.getElementById("descricoes");
-  descricoes.innerHTML = "<h3>Descrição das habilidades</h3>";
-
-  Object.keys(descritoresPort).forEach((k,i) => {
-    descricoes.innerHTML += `<div class="habilidade"><b>${k}</b> – ${descritoresPort[k].def}<br><i>Prejuízo:</i> ${descritoresPort[k].prej}</div>`;
-  });
-
-  Object.keys(descritoresMat).forEach((k,i) => {
-    descricoes.innerHTML += `<div class="habilidade"><b>${k}</b> – ${descritoresMat[k].def}<br><i>Prejuízo:</i> ${descritoresMat[k].prej}</div>`;
-  });
-});
-</script>
+      // Mostrar descritores abaixo do gráfico
+      const descritoresDiv = document.getElementById("descritores");
+      descritoresDiv.innerHTML = "<h3>Descritores das Habilidades</h3>";
+      Object.entries(descritoresPort).forEach(([h, d]) => {
+        descritoresDiv.innerHTML += `<div class="descritor"><b>${h}:</b> ${d}</div>`;
+      });
+      Object.entries(descritoresMat).forEach(([h, d]) => {
+        descritoresDiv.innerHTML += `<div class="descritor"><b>${h}:</b> ${d}</div>`;
+      });
+    });
+  </script>
 </body>
 </html>
