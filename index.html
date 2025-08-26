@@ -52,6 +52,12 @@
       max-width: 100%;
       margin: 20px 0;
     }
+    #infoAluno {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #2b6cb0;
+      margin: 15px 0;
+    }
     .descricoes {
       margin-top: 30px;
     }
@@ -92,6 +98,7 @@
       <option value="">-- Escolha um aluno --</option>
     </select>
 
+    <div id="infoAluno"></div>
     <canvas id="grafico"></canvas>
     <div id="descricoes" class="descricoes"></div>
   </div>
@@ -104,26 +111,26 @@
 
     const dadosCSV = { "9ano": [], "3serie": [] };
 
-    const descritoresPort = {
-      "H 01": "Localizar informações explícitas em um texto. Essencial para leitura básica; não dominar dificulta qualquer compreensão.",
-      "H 02": "Inferir sentido de palavras. Importante para vocabulário; sem isso, a interpretação de textos fica comprometida.",
-      "H 03": "Identificar tema central. Base para interpretação; ausência compromete análise global.",
-      // ... continue até H15
-    };
+    // Descritores genéricos
+    const descritoresPort = {};
+    for (let i = 1; i <= 15; i++) {
+      const num = String(i).padStart(2, "0");
+      descritoresPort["H " + num] = `Português H ${num}: Habilidade de leitura/interpretação. Importante para desenvolver compreensão textual; dificuldades nessa habilidade comprometem estudos em todas as áreas.`;
+    }
 
-    const descritoresMat = {
-      "HM 01": "Compreender números inteiros. Base para cálculos; sem isso, limita toda a matemática posterior.",
-      "HM 02": "Resolver operações com frações. Essencial em proporções; não dominar prejudica álgebra e problemas do dia a dia.",
-      "HM 03": "Resolver problemas de proporcionalidade. Crucial para matemática aplicada; falha gera dificuldade em física e química.",
-      // ... continue até HM20
-    };
+    const descritoresMat = {};
+    for (let i = 1; i <= 20; i++) {
+      const num = String(i).padStart(2, "0");
+      descritoresMat["HM " + num] = `Matemática HM ${num}: Competência de raciocínio lógico ou cálculo. Essencial para resolver problemas práticos; ausência dessa habilidade pode gerar dificuldades no aprendizado futuro.`;
+    }
 
     const turmaSelect = document.getElementById("turmaSelect");
     const alunoSelect = document.getElementById("alunoSelect");
     const ctx = document.getElementById("grafico").getContext("2d");
+    const infoAluno = document.getElementById("infoAluno");
     let chart;
 
-    // Carregar dados
+    // Carregar dados CSV
     Object.keys(arquivos).forEach(turma => {
       arquivos[turma].forEach(arq => {
         Papa.parse(arq, {
@@ -142,6 +149,7 @@
 
     turmaSelect.addEventListener("change", () => {
       alunoSelect.innerHTML = "<option value=''>-- Escolha um aluno --</option>";
+      infoAluno.innerHTML = "";
       const turma = turmaSelect.value;
       if (turma && dadosCSV[turma]) {
         const alunos = [...new Set(dadosCSV[turma].map(l => l.Estudante))];
@@ -161,6 +169,13 @@
 
       const dadosAluno = dadosCSV[turma].filter(l => l.Estudante === aluno);
 
+      if (!dadosAluno.length) return;
+
+      // Mostrar nome + nível de aprendizagem
+      const nivel = dadosAluno[0]["Níveis de Aprendizagem"] || "Nível não informado";
+      infoAluno.textContent = `${aluno} – ${nivel}`;
+
+      // Montar dados para gráfico
       const labels = [];
       const valores = [];
 
@@ -193,7 +208,7 @@
           scales: {
             y: {
               beginAtZero: true,
-              max: 5, // ✅ limite ajustado
+              max: 5,
               ticks: { stepSize: 1 }
             }
           },
@@ -203,7 +218,7 @@
                 label: ctx => {
                   const key = ctx.label;
                   const desc = descritoresPort[key] || descritoresMat[key] || "Sem descrição disponível.";
-                  return `${key}: ${ctx.formattedValue} acertos – ${desc}`;
+                  return `${key}: ${ctx.formattedValue} – ${desc}`;
                 }
               }
             }
