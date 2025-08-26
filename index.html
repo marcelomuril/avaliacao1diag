@@ -31,8 +31,8 @@
       </select>
     </div>
 
-    <div class="bg-white shadow-lg rounded-lg p-4 mb-6">
-      <canvas id="grafico" class="w-full h-[400px]"></canvas>
+    <div class="bg-white shadow-lg rounded-lg p-4 mb-6 h-[400px]">
+      <canvas id="grafico" class="w-full h-full"></canvas>
     </div>
 
     <section id="descritoresBox" class="space-y-6"></section>
@@ -45,7 +45,7 @@
       3: { port: "port3.csv", mat: "mat3.csv" }
     };
 
-    // Descritores genéricos Português
+    // Descritores Português
     const descritoresPort = {
       H01: { texto: "Localizar informações explícitas em textos.", aplic: "Apoia leitura literal e compreensão inicial.", prej: "Sem isso, o aluno não entende enunciados simples." },
       H02: { texto: "Inferir informações implícitas.", aplic: "Exercita leitura crítica.", prej: "Dificuldade em compreender mensagens ocultas." },
@@ -57,15 +57,23 @@
       H08: { texto: "Reconhecer gêneros textuais.", aplic: "Favorece adequação de linguagem.", prej: "Prejudica interpretação de textos diversos." }
     };
 
-    // Descritores genéricos Matemática
+    // Descritores Matemática
     const descritoresMat = {
-      H09: { texto: "Efetuar cálculos básicos.", aplic: "Base para operações diárias.", prej: "Dificuldade em problemas simples." },
-      H10: { texto: "Resolver problemas com múltiplas operações.", aplic: "Exercita raciocínio lógico.", prej: "Erros em questões de contexto real." },
-      H11: { texto: "Manipular expressões algébricas.", aplic: "Base para álgebra avançada.", prej: "Dificulta progressão nos estudos." },
-      H12: { texto: "Resolver equações e inequações.", aplic: "Essencial em situações práticas.", prej: "Compromete avanço em matemática." },
-      H13: { texto: "Reconhecer e aplicar geometria.", aplic: "Importante em espaço e forma.", prej: "Dificuldade em leitura de mapas e figuras." },
-      H14: { texto: "Interpretar dados estatísticos.", aplic: "Base para tomada de decisão.", prej: "Compromete leitura crítica de informações." },
-      H15: { texto: "Resolver problemas de probabilidade.", aplic: "Importante em estatística.", prej: "Não entende previsões ou estimativas." }
+      H01: { texto: "Efetuar cálculos básicos.", aplic: "Base para operações diárias.", prej: "Dificuldade em problemas simples." },
+      H02: { texto: "Resolver problemas com múltiplas operações.", aplic: "Exercita raciocínio lógico.", prej: "Erros em questões de contexto real." },
+      H03: { texto: "Manipular expressões algébricas.", aplic: "Base para álgebra avançada.", prej: "Dificulta progressão nos estudos." },
+      H04: { texto: "Resolver equações e inequações.", aplic: "Essencial em situações práticas.", prej: "Compromete avanço em matemática." },
+      H05: { texto: "Reconhecer e aplicar geometria.", aplic: "Importante em espaço e forma.", prej: "Dificuldade em leitura de mapas e figuras." },
+      H06: { texto: "Interpretar dados estatísticos.", aplic: "Base para tomada de decisão.", prej: "Compromete leitura crítica de informações." },
+      H07: { texto: "Resolver problemas de probabilidade.", aplic: "Importante em estatística.", prej: "Não entende previsões ou estimativas." },
+      H08: { texto: "Aplicar raciocínio proporcional.", aplic: "Essencial em porcentagens e escalas.", prej: "Compromete cálculos do dia a dia." },
+      H09: { texto: "Entender progressões numéricas.", aplic: "Base para funções.", prej: "Dificulta percepção de padrões." },
+      H10: { texto: "Resolver problemas com funções.", aplic: "Usado em economia e ciências.", prej: "Prejudica compreensão de gráficos." },
+      H11: { texto: "Interpretar gráficos de funções.", aplic: "Essencial em leitura visual.", prej: "Dificulta interpretação em física e estatística." },
+      H12: { texto: "Usar conceitos de trigonometria.", aplic: "Importante em geometria e ondas.", prej: "Dificulta avanço em exatas." },
+      H13: { texto: "Aplicar noções de probabilidade avançada.", aplic: "Base para estatística moderna.", prej: "Prejudica previsão e análise de dados." },
+      H14: { texto: "Resolver problemas de combinatória.", aplic: "Essencial em estatística e lógica.", prej: "Compromete estratégias de resolução." },
+      H15: { texto: "Aplicar noções de estatística descritiva.", aplic: "Importante para leitura de pesquisas.", prej: "Dificulta análise crítica de informações." }
     };
 
     let dadosPort = [], dadosMat = [];
@@ -76,7 +84,6 @@
     const ctx = document.getElementById("grafico").getContext("2d");
     const descritoresBox = document.getElementById("descritoresBox");
 
-    // Carrega CSVs
     function carregarCSVs(ano) {
       return new Promise(resolve => {
         let { port, mat } = arquivos[ano];
@@ -98,7 +105,6 @@
       });
     }
 
-    // Preenche lista alunos
     function preencherAlunos() {
       alunoSelect.innerHTML = '<option value="">-- Escolha --</option>';
       dadosPort.forEach(linha => {
@@ -111,7 +117,6 @@
       });
     }
 
-    // Gera gráfico
     function gerarGrafico(aluno) {
       let linhaPort = dadosPort.find(l => l["Estudante"] === aluno);
       let linhaMat = dadosMat.find(l => l["Estudante"] === aluno);
@@ -119,12 +124,25 @@
 
       let labels = [];
       let valoresPort = [], valoresMat = [];
+      let dificuldadesPort = [], dificuldadesMat = [];
 
       for (let i = 1; i <= 15; i++) {
         let col = "H " + String(i).padStart(2, "0");
-        labels.push("H" + String(i).padStart(2, "0"));
-        valoresPort.push(parseInt(linhaPort[col] || 0));
-        valoresMat.push(parseInt(linhaMat[col] || 0));
+        let label = "H" + String(i).padStart(2, "0");
+        labels.push(label);
+
+        let valP = parseInt(linhaPort[col] || 0);
+        let valM = parseInt(linhaMat[col] || 0);
+
+        valoresPort.push(valP);
+        valoresMat.push(valM);
+
+        if (i <= 8 && valP <= 2) { // dificuldade em Português
+          dificuldadesPort.push({ h: label, ...descritoresPort[label] });
+        }
+        if (valM <= 2) { // dificuldade em Matemática
+          dificuldadesMat.push({ h: label, ...descritoresMat[label] });
+        }
       }
 
       if (grafico) grafico.destroy();
@@ -160,30 +178,33 @@
         }
       });
 
-      // Atualiza descrições abaixo do gráfico
+      // exibir só dificuldades
       descritoresBox.innerHTML = `
         <div>
-          <h3 class="text-xl font-bold text-blue-700 mb-2">📘 Português</h3>
-          <ul class="space-y-2">
-            ${Object.entries(descritoresPort).map(([h, d]) =>
-              `<li><strong>${h}</strong> – ${d.texto}<br>
+          <h3 class="text-xl font-bold text-blue-700 mb-2">📘 Dificuldades em Português</h3>
+          ${dificuldadesPort.length > 0 ? `
+            <ul class="space-y-2">
+              ${dificuldadesPort.map(d => `
+                <li><strong>${d.h}</strong> – ${d.texto}<br>
                 <em>Aplicação:</em> ${d.aplic}<br>
                 <em>Prejuízo:</em> ${d.prej}</li>`).join("")}
-          </ul>
+            </ul>
+          ` : `<p class="text-green-600">Nenhuma dificuldade relevante identificada.</p>`}
         </div>
         <div>
-          <h3 class="text-xl font-bold text-orange-700 mb-2">🔢 Matemática</h3>
-          <ul class="space-y-2">
-            ${Object.entries(descritoresMat).map(([h, d]) =>
-              `<li><strong>${h}</strong> – ${d.texto}<br>
+          <h3 class="text-xl font-bold text-orange-700 mb-2">🔢 Dificuldades em Matemática</h3>
+          ${dificuldadesMat.length > 0 ? `
+            <ul class="space-y-2">
+              ${dificuldadesMat.map(d => `
+                <li><strong>${d.h}</strong> – ${d.texto}<br>
                 <em>Aplicação:</em> ${d.aplic}<br>
                 <em>Prejuízo:</em> ${d.prej}</li>`).join("")}
-          </ul>
+            </ul>
+          ` : `<p class="text-green-600">Nenhuma dificuldade relevante identificada.</p>`}
         </div>
       `;
     }
 
-    // Eventos
     anoSelect.addEventListener("change", async () => {
       if (anoSelect.value) {
         await carregarCSVs(anoSelect.value);
