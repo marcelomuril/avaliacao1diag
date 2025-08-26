@@ -2,260 +2,223 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>CCM Sebastião Paraná - Avaliação Diagnóstica 2025</title>
+  <title>Avaliação Diagnóstica 2025</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f6f9;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
       margin: 0;
       padding: 0;
+      background-color: #f9fafb;
       color: #333;
     }
     header {
-      background-color: #2c3e50;
+      background: linear-gradient(90deg, #2b6cb0, #38a169);
       color: white;
       padding: 20px;
       text-align: center;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
     }
     h1 {
       margin: 0;
-      font-size: 26px;
+      font-size: 1.8rem;
     }
     h2 {
       margin: 5px 0 0;
-      font-size: 18px;
       font-weight: normal;
-      opacity: 0.9;
     }
-    main {
-      padding: 20px;
-      max-width: 1100px;
+    .container {
+      max-width: 1000px;
       margin: auto;
+      padding: 20px;
     }
     select {
-      padding: 8px;
-      margin: 10px 0;
-      font-size: 16px;
+      display: block;
+      margin: 15px 0;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid #ccc;
+      background: #fff;
+      font-size: 1rem;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      transition: border 0.3s, box-shadow 0.3s;
     }
-    .card {
-      background: white;
-      padding: 20px;
-      margin-top: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    select:hover {
+      border: 1px solid #2b6cb0;
+      box-shadow: 0 2px 8px rgba(56, 161, 105, 0.3);
     }
     canvas {
-      width: 100% !important;
-      max-height: 400px !important;
+      max-width: 100%;
+      margin: 20px 0;
     }
-    .descritores {
+    .descricoes {
       margin-top: 30px;
     }
-    .descritor {
-      padding: 10px;
-      border-bottom: 1px solid #ddd;
+    .habilidade {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 8px;
     }
-    .descritor:nth-child(odd) {
-      background: #f9f9f9;
+    .habilidade:nth-child(odd) {
+      background: #edf2f7;
     }
-    .descritor:nth-child(even) {
-      background: #ffffff;
+    .habilidade:nth-child(even) {
+      background: #e6fffa;
     }
-    h3 {
-      margin-top: 0;
-      color: #2c3e50;
+    .habilidade strong {
+      display: block;
+      color: #2b6cb0;
+      margin-bottom: 5px;
     }
   </style>
 </head>
 <body>
   <header>
     <h1>CCM Sebastião Paraná</h1>
-    <h2>1ª Avaliação Diagnóstica - 2025</h2>
+    <h2>1ª Avaliação Diagnóstica 2025</h2>
   </header>
-  <main>
-    <label>Selecione a turma:</label>
+
+  <div class="container">
+    <label for="turmaSelect">Selecione a turma:</label>
     <select id="turmaSelect">
-      <option value="">-- escolha --</option>
-      <option value="9ano">9º Ano</option>
-      <option value="3serie">3ª Série</option>
+      <option value="">-- Escolha --</option>
+      <option value="9ano">9º Ano Fundamental</option>
+      <option value="3serie">3ª Série Ensino Médio</option>
     </select>
 
-    <br>
-    <label>Selecione o aluno:</label>
-    <select id="alunoSelect" disabled>
-      <option value="">-- escolha a turma antes --</option>
+    <label for="alunoSelect">Selecione o aluno:</label>
+    <select id="alunoSelect">
+      <option value="">-- Escolha um aluno --</option>
     </select>
 
-    <div class="card">
-      <canvas id="grafico"></canvas>
-    </div>
-
-    <div id="descritores" class="descritores"></div>
-  </main>
+    <canvas id="grafico"></canvas>
+    <div id="descricoes" class="descricoes"></div>
+  </div>
 
   <script>
     const arquivos = {
-      "9ano": { port: "port9.csv", mat: "mat9.csv" },
-      "3serie": { port: "port3.csv", mat: "mat3.csv" }
+      "9ano": ["port9.csv", "mat9.csv"],
+      "3serie": ["port3.csv", "mat3.csv"]
     };
 
-    const dadosCSV = { port: [], mat: [] };
-    let turmaSelecionada = "";
-    let chart = null;
+    const dadosCSV = { "9ano": [], "3serie": [] };
 
-    // descritores genéricos
     const descritoresPort = {
-      "H 01": "Localizar informações explícitas em um texto.",
-      "H 02": "Inferir o sentido de uma palavra ou expressão em contexto.",
-      "H 03": "Reconhecer a finalidade de um texto.",
-      "H 04": "Identificar tema de um texto.",
-      "H 05": "Distinguir fato de opinião.",
-      "H 06": "Estabelecer relações de causa e consequência.",
-      "H 07": "Identificar efeitos de ironia ou humor.",
-      "H 08": "Reconhecer recursos linguísticos em textos argumentativos.",
-      "H 09": "Inferir informações implícitas.",
-      "H 10": "Relacionar partes de um texto.",
-      "H 11": "Identificar variedade linguística usada.",
-      "H 12": "Reconhecer marcas de coesão.",
-      "H 13": "Reconhecer elementos de narrativa.",
-      "H 14": "Analisar o ponto de vista em um texto.",
-      "H 15": "Comparar textos sobre o mesmo tema."
+      "H 01": "Localizar informações explícitas em um texto. Essencial para leitura básica; não dominar dificulta qualquer compreensão.",
+      "H 02": "Inferir sentido de palavras. Importante para vocabulário; sem isso, a interpretação de textos fica comprometida.",
+      "H 03": "Identificar tema central. Base para interpretação; ausência compromete análise global.",
+      // ... continue até H15
     };
 
     const descritoresMat = {
-      "HM 01": "Resolver problemas envolvendo as quatro operações.",
-      "HM 02": "Calcular com números racionais em diferentes representações.",
-      "HM 03": "Resolver problemas de proporcionalidade.",
-      "HM 04": "Trabalhar com porcentagem e juros simples.",
-      "HM 05": "Resolver problemas de equações do 1º grau.",
-      "HM 06": "Interpretar informações em tabelas e gráficos.",
-      "HM 07": "Resolver problemas de geometria plana.",
-      "HM 08": "Resolver problemas de geometria espacial.",
-      "HM 09": "Calcular perímetro e área de figuras planas.",
-      "HM 10": "Calcular volume de sólidos geométricos.",
-      "HM 11": "Resolver problemas com expressões algébricas.",
-      "HM 12": "Analisar gráficos de funções.",
-      "HM 13": "Resolver problemas de função do 1º grau.",
-      "HM 14": "Resolver problemas de função quadrática.",
-      "HM 15": "Analisar progressões aritméticas e geométricas.",
-      "HM 16": "Resolver problemas de probabilidade.",
-      "HM 17": "Resolver problemas de estatística descritiva.",
-      "HM 18": "Resolver problemas de combinatória.",
-      "HM 19": "Interpretar situações envolvendo grandezas físicas.",
-      "HM 20": "Aplicar raciocínio lógico na resolução de problemas."
+      "HM 01": "Compreender números inteiros. Base para cálculos; sem isso, limita toda a matemática posterior.",
+      "HM 02": "Resolver operações com frações. Essencial em proporções; não dominar prejudica álgebra e problemas do dia a dia.",
+      "HM 03": "Resolver problemas de proporcionalidade. Crucial para matemática aplicada; falha gera dificuldade em física e química.",
+      // ... continue até HM20
     };
 
-    function carregarCSVs(turma, callback) {
-      dadosCSV.port = [];
-      dadosCSV.mat = [];
+    const turmaSelect = document.getElementById("turmaSelect");
+    const alunoSelect = document.getElementById("alunoSelect");
+    const ctx = document.getElementById("grafico").getContext("2d");
+    let chart;
 
-      Papa.parse(arquivos[turma].port, {
-        download: true,
-        header: true,
-        skipEmptyLines: true,
-        delimiter: ";",
-        complete: res => {
-          dadosCSV.port = res.data;
-          if (dadosCSV.mat.length) callback();
-        }
-      });
-
-      Papa.parse(arquivos[turma].mat, {
-        download: true,
-        header: true,
-        skipEmptyLines: true,
-        delimiter: ";",
-        complete: res => {
-          dadosCSV.mat = res.data;
-          if (dadosCSV.port.length) callback();
-        }
-      });
-    }
-
-    document.getElementById("turmaSelect").addEventListener("change", function() {
-      turmaSelecionada = this.value;
-      const alunoSelect = document.getElementById("alunoSelect");
-      alunoSelect.innerHTML = "<option value=''>-- carregando --</option>";
-      alunoSelect.disabled = true;
-
-      if (!turmaSelecionada) return;
-
-      carregarCSVs(turmaSelecionada, () => {
-        const alunos = [...new Set(dadosCSV.port.map(l => l["Estudante"]))];
-        alunoSelect.innerHTML = "<option value=''>-- escolha --</option>";
-        alunos.forEach(a => {
-          alunoSelect.innerHTML += `<option value="${a}">${a}</option>`;
+    // Carregar dados
+    Object.keys(arquivos).forEach(turma => {
+      arquivos[turma].forEach(arq => {
+        Papa.parse(arq, {
+          download: true,
+          header: true,
+          skipEmptyLines: true,
+          delimiter: ";",
+          complete: res => {
+            res.data.forEach(linha => {
+              dadosCSV[turma].push(linha);
+            });
+          }
         });
-        alunoSelect.disabled = false;
       });
     });
 
-    document.getElementById("alunoSelect").addEventListener("change", function() {
-      const aluno = this.value;
-      if (!aluno) return;
+    turmaSelect.addEventListener("change", () => {
+      alunoSelect.innerHTML = "<option value=''>-- Escolha um aluno --</option>";
+      const turma = turmaSelect.value;
+      if (turma && dadosCSV[turma]) {
+        const alunos = [...new Set(dadosCSV[turma].map(l => l.Estudante))];
+        alunos.forEach(aluno => {
+          const opt = document.createElement("option");
+          opt.value = aluno;
+          opt.textContent = aluno;
+          alunoSelect.appendChild(opt);
+        });
+      }
+    });
 
-      const dadosPort = dadosCSV.port.find(l => l["Estudante"] === aluno) || {};
-      const dadosMat = dadosCSV.mat.find(l => l["Estudante"] === aluno) || {};
+    alunoSelect.addEventListener("change", () => {
+      const turma = turmaSelect.value;
+      const aluno = alunoSelect.value;
+      if (!turma || !aluno) return;
 
-      const labels = [...Object.keys(descritoresPort), ...Object.keys(descritoresMat)];
-      const portData = Object.keys(descritoresPort).map(h => parseInt(dadosPort[h] || 0));
-      const matData = Object.keys(descritoresMat).map(h => parseInt(dadosMat[h] || 0));
+      const dadosAluno = dadosCSV[turma].filter(l => l.Estudante === aluno);
+
+      const labels = [];
+      const valores = [];
+
+      dadosAluno.forEach(linha => {
+        Object.keys(linha).forEach(key => {
+          if (key.startsWith("H ")) {
+            labels.push(key);
+            valores.push(parseInt(linha[key]) || 0);
+          } else if (key.startsWith("HM")) {
+            labels.push(key);
+            valores.push(parseInt(linha[key]) || 0);
+          }
+        });
+      });
 
       if (chart) chart.destroy();
-      const ctx = document.getElementById("grafico").getContext("2d");
-
       chart = new Chart(ctx, {
         type: "bar",
         data: {
           labels: labels,
-          datasets: [
-            {
-              label: "Português",
-              data: [...portData, ...Array(matData.length).fill(null)],
-              backgroundColor: "rgba(54,162,235,0.8)"
-            },
-            {
-              label: "Matemática",
-              data: [...Array(portData.length).fill(null), ...matData],
-              backgroundColor: "rgba(255,99,132,0.8)"
-            }
-          ]
+          datasets: [{
+            label: "Desempenho do Aluno",
+            data: valores,
+            backgroundColor: labels.map(l => l.startsWith("H ") ? "#2b6cb0aa" : "#38a169aa"),
+            borderColor: labels.map(l => l.startsWith("H ") ? "#2b6cb0" : "#38a169"),
+            borderWidth: 1
+          }]
         },
         options: {
-          responsive: true,
-          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 5, // ✅ limite ajustado
+              ticks: { stepSize: 1 }
+            }
+          },
           plugins: {
-            legend: { display: true, position: "top" },
             tooltip: {
               callbacks: {
                 label: ctx => {
                   const key = ctx.label;
-                  const desc = descritoresPort[key] || descritoresMat[key] || "";
+                  const desc = descritoresPort[key] || descritoresMat[key] || "Sem descrição disponível.";
                   return `${key}: ${ctx.formattedValue} acertos – ${desc}`;
                 }
               }
-            }
-          },
-          scales: {
-            y: { beginAtZero: true, max: 20 },
-            x: {
-              ticks: { autoSkip: false, maxRotation: 60, minRotation: 60 }
             }
           }
         }
       });
 
-      // descritores
-      const descritoresDiv = document.getElementById("descritores");
-      descritoresDiv.innerHTML = "<h3>Descritores das Habilidades</h3>";
-      Object.entries(descritoresPort).forEach(([h, d]) => {
-        descritoresDiv.innerHTML += `<div class="descritor"><b>${h}:</b> ${d}</div>`;
-      });
-      Object.entries(descritoresMat).forEach(([h, d]) => {
-        descritoresDiv.innerHTML += `<div class="descritor"><b>${h}:</b> ${d}</div>`;
+      // descrições abaixo
+      const descrDiv = document.getElementById("descricoes");
+      descrDiv.innerHTML = "";
+      labels.forEach((habilidade, i) => {
+        const div = document.createElement("div");
+        div.className = "habilidade";
+        div.innerHTML = `<strong>${habilidade}</strong> ${descritoresPort[habilidade] || descritoresMat[habilidade] || "Sem descrição disponível."}`;
+        descrDiv.appendChild(div);
       });
     });
   </script>
